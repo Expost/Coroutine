@@ -1,5 +1,5 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2012
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MySimpleCoroutine", "MySimpleCoroutine\MySimpleCoroutine.vcxproj", "{0BA8C8CD-00B7-4915-91F4-B415194A8EB4}"
 EndProject

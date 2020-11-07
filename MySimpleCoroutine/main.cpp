@@ -2,39 +2,96 @@
 
 #include <stdio.h>
 #include "coroutine_mgr.h"
+#include "coroutine.h"
 
-
-
-void func_a(void *parm)
+class MyCoroutine1 :public Coroutine
 {
-    printf("this is func_a start\n");
+private:
+    void run() override
+    {
+        int sum = 0;
+        for (int i = 0; i < 20; i++)
+        {
+            printf("[Coroutine 1] sum is:%d\n", sum += i);
+            switch_out();
+        }
+    }
+};
 
-    YEID(parm);
+class MyCoroutine2 :public Coroutine
+{
+private:
+    void run() override
+    {
+        func1(10);
+        func2();
+    }
 
-    printf("this is func_a end\n");
+    void func1(int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            printf("[Coroutine 2] i is:%d\n", i);
+            switch_out();
+        }
+    }
+
+    void func2()
+    {
+        printf("[Coroutine 2] func2 start\n");
+        switch_out();
+        func3();
+    }
+
+    void func3()
+    {
+        printf("[Coroutine 2] current tid is:%d\n", GetCurrentThreadId());
+        switch_out();
+        printf("[Coroutine 2] func3 end.\n");
+    }
+};
+
+DWORD WINAPI my_thread1(LPVOID parm)
+{
+    int count = 0;
+    while (CoroutineMgr::get_instance().run())
+    {
+        printf("[my_thread1] count:%d\n\n", count++);
+        Sleep(2000);
+    }
+
+    return 0;
 }
 
-void func_b(void *parm)
+DWORD WINAPI my_thread2(LPVOID parm)
 {
-    printf("this is func_b start\n");
+    int count = 0;
+    while (CoroutineMgr::get_instance().run())
+    {
+        printf("[my_thread2] count:%d\n\n", count++);
+        Sleep(1000);
+    }
 
-    YEID(parm);
-
-    printf("this is func_b end\n");
+    return 0;
 }
-
 
 int main()
 {
-    CoroutineMgr co;
-    CoroutineMgr::thread_t *t1 = co.create_coroutine(0, func_a, NULL);
-    CoroutineMgr::thread_t *t2 = co.create_coroutine(1, func_b, NULL);
+    CoroutineMgr::get_instance().add_coroutine(new MyCoroutine1);
+    CoroutineMgr::get_instance().add_coroutine(new MyCoroutine2);
 
-    co.add_co(t1);
-    co.add_co(t2);
+    // 单线程
+    int count = 0;
+    while(CoroutineMgr::get_instance().run())
+    {
+        printf("[main func] count:%d\n\n", count++);
+        Sleep(1000);
+    }
 
-    co.run_all();
-
+    // 多线程
+    //CreateThread(NULL, 0, my_thread1, NULL, NULL, 0);
+    //CreateThread(NULL, 0, my_thread2, NULL, NULL, 0);
+        
     getchar();
     return 0;
 }
