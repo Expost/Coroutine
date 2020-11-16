@@ -27,17 +27,27 @@ Coroutine* CoroutineMgr::get_coroutine()
 {
     EnterCriticalSection(&lock_);
     Coroutine *coroutine = NULL;
-    for (auto co : coroutine_vec_)
+    auto itr = coroutine_vec_.begin();
+    if (itr != coroutine_vec_.end() &&
+        ((*itr)->get_coroutine_state() == Coroutine::PRESTART ||
+        (*itr)->get_coroutine_state() == Coroutine::SUSPEND))
     {
-        if (co->get_coroutine_state() == Coroutine::PRESTART || 
-            co->get_coroutine_state() == Coroutine::SUSPEND)
-        {
-            /// 在这里就设为RUNING，避免多线程情况下，该协程被重复选中
-            co->set_coroutine_state(Coroutine::RUNNING);
-            coroutine = co;
-            break;
-        }
+        coroutine = *itr;
+        coroutine_vec_.erase(itr);
+        coroutine_vec_.push_back(coroutine);
     }
+    
+    //for (auto co : coroutine_vec_)
+    //{
+    //    if (co->get_coroutine_state() == Coroutine::PRESTART || 
+    //        co->get_coroutine_state() == Coroutine::SUSPEND)
+    //    {
+    //        /// 在这里就设为RUNING，避免多线程情况下，该协程被重复选中
+    //        co->set_coroutine_state(Coroutine::RUNNING);
+    //        coroutine = co;
+    //        break;
+    //    }
+    //}
 
     LeaveCriticalSection(&lock_);
     return coroutine;

@@ -10,7 +10,7 @@ private:
     void run() override
     {
         int sum = 0;
-        for (int i = 0; i < 20; i++)
+        for (int i = 0; i < 3; i++)
         {
             printf("[Coroutine 1] sum is:%d\n", sum += i);
             switch_out();
@@ -23,7 +23,7 @@ class MyCoroutine2 :public Coroutine
 private:
     void run() override
     {
-        func1(10);
+        func1(3);
         func2();
     }
 
