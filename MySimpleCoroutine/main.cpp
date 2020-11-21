@@ -23,7 +23,7 @@ class MyCoroutine2 :public Coroutine
 private:
     void run() override
     {
-        func1(3);
+        func1(1);
         func2();
     }
 

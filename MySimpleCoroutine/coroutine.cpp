@@ -8,15 +8,21 @@ _declspec(naked) int save_context(Coroutine::CoroutineCtx *from)
 {
     __asm
     {
-        mov eax, [esp + 4];
+        mov eax, [esp + 4];     // 取参
         mov[eax], edi;
         mov[eax + 4], esi;
         mov[eax + 8], ebp;
-        mov[eax + 12], esp;
+
+        //lea ebp, [esp + 4];
+        lea esp, [esp + 4];
+        mov[eax + 12], esp;     // ebp保存后已经无用了，这里借用ebp存储修正后的值
+        lea esp, [esp - 4];
+
         mov[eax + 16], ebx;
         mov[eax + 20], edx;
-        mov[eax + 24], ecx;
-        push[esp];                  //< 压入该函数的返回地址
+        mov[eax + 24], ecx;        
+
+        push [esp];                 //< 压入该函数的返回地址
         pop dword ptr[eax + 28];    //< 将返回地址存放在context中的eip字段中
 
         xor eax, eax;
@@ -36,6 +42,7 @@ __declspec(naked) int restore_context(Coroutine::CoroutineCtx *to)
         mov ebx, [eax + 16];
         mov edx, [eax + 20];
         mov ecx, [eax + 24];
+
         mov eax, [eax + 28];
         jmp eax;
     }
@@ -116,6 +123,7 @@ void Coroutine::switch_out()
     do_switch(&self_ctx_, original_ctx_);
 }
 
+//#pragma optimize( "", off)
 void Coroutine::do_switch(CoroutineCtx *from_ctx, CoroutineCtx *to_ctx)
 {
     int ret = save_context(from_ctx); //保存上下文, 首次返回会设置eax = 0
@@ -129,3 +137,4 @@ void Coroutine::do_switch(CoroutineCtx *from_ctx, CoroutineCtx *to_ctx)
     }
 }
 
+//#pragma optimize( "", on)

@@ -37,8 +37,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="tramp.asm">
+    <None Include="tramp.asm">
       <Filter>Coroutine</Filter>
-    </CustomBuild>
+    </None>
   </ItemGroup>
 </Project>

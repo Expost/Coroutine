@@ -7,7 +7,11 @@ save_context proc
     mov [rax], rdi
     mov [rax + 8], rsi
     mov [rax + 16], rbp
+
+    lea rsp, [rsp + 8]
     mov [rax + 24], rsp
+    lea rsp, [rsp - 8]
+
     mov [rax + 32], rbx
     mov [rax + 40], rcx
     mov [rax + 48], rdx
