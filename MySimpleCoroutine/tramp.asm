@@ -1,9 +1,9 @@
 .CODE
-public SaveContext
-public RestoreContext
+public save_context
+public restore_context
 
-SaveContext proc
-    mov rax, [rsp + 8]
+save_context proc
+    mov rax, rcx
     mov [rax], rdi
     mov [rax + 8], rsi
     mov [rax + 16], rbp
@@ -19,13 +19,14 @@ SaveContext proc
     mov [rax + 96], r13
     mov [rax + 104], r14
     mov [rax + 112], r15
-    push [rbp]
+    push [rsp]
     pop qword ptr[rax + 120]
     xor rax, rax
-SaveContext ENDP
+    ret
+save_context ENDP
 
-RestoreContext proc
-    mov rax, [rsp + 8]
+restore_context proc
+    mov rax, rcx
     mov rdi, [rax]
     mov rsi, [rax + 8]
     mov rbp, [rax + 16]
@@ -43,7 +44,7 @@ RestoreContext proc
     mov r15, [rax + 112]
     mov rax, [rax + 120]
     jmp rax
-RestoreContext ENDP
+restore_context ENDP
 
 
 END
