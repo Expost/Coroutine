@@ -48,9 +48,11 @@ __declspec(naked) int restore_context(Coroutine::CoroutineCtx *to)
     }
 }
 #else
-extern "C" int save_context(Coroutine::CoroutineCtx *from);
-extern "C" int restore_context(Coroutine::CoroutineCtx *to);
+extern "C" int save_context(CoroutineCtx *from);
+extern "C" int restore_context(CoroutineCtx *to);
 #endif
+
+thread_local CoroutineCtx thread_local_ctx = { 0 };
 
 Coroutine::Coroutine(CoInterface &&co_inf)
          : id_(0),
@@ -109,21 +111,21 @@ void Coroutine::wrapper(void *parm)
     coroutine->yield();
 }
 
-void Coroutine::resume(CoroutineCtx *original_ctx)
+void Coroutine::resume()
 {
     if (get_coroutine_state() == FINISHED)
     {
         return;
     }
 
-    this->original_ctx_ = original_ctx;
-    do_switch(original_ctx, &self_ctx_);
+    //this->original_ctx_ = original_ctx;
+    do_switch(&thread_local_ctx, &self_ctx_);
     set_coroutine_state(get_coroutine_state() != FINISHED ? SUSPEND : FINISHED);
 }
 
 void Coroutine::yield()
 {
-    do_switch(&self_ctx_, original_ctx_);
+    do_switch(&self_ctx_, &thread_local_ctx);
 }
 
 //#pragma optimize( "", off)

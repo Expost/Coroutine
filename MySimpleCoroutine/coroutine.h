@@ -9,47 +9,46 @@
 class Coroutine;
 using CoInterface = std::function<void*(Coroutine* this_)>;
 
-class Coroutine
-{
-public:
-
 #ifndef _M_X64
-    struct CoroutineCtx
-    {
-        //unsigned int eflag;
-        unsigned int edi; // 0
-        unsigned int esi; // 4
-        unsigned int ebp; // 8
-        unsigned int esp; // 12
-        unsigned int ebx; // 16
-        unsigned int edx; // 20
-        unsigned int ecx; // 24
-        unsigned int eip; // 28
-    } ;
+struct CoroutineCtx
+{
+    //unsigned int eflag;
+    unsigned int edi; // 0
+    unsigned int esi; // 4
+    unsigned int ebp; // 8
+    unsigned int esp; // 12
+    unsigned int ebx; // 16
+    unsigned int edx; // 20
+    unsigned int ecx; // 24
+    unsigned int eip; // 28
+};
 #else
-    struct CoroutineCtx
-    {
-        //unsigned int eflag;
-        uint64_t rdi;
-        uint64_t rsi;
-        uint64_t rbp;
-        uint64_t rsp;
-        uint64_t rbx;
-        uint64_t rcx;
-        uint64_t rdx;
-        uint64_t r8;
-        uint64_t r9;
-        uint64_t r10;
-        uint64_t r11;
-        uint64_t r12;
-        uint64_t r13;
-        uint64_t r14;
-        uint64_t r15;
-        uint64_t rip;
-    };
+struct CoroutineCtx
+{
+    //unsigned int eflag;
+    uint64_t rdi;
+    uint64_t rsi;
+    uint64_t rbp;
+    uint64_t rsp;
+    uint64_t rbx;
+    uint64_t rcx;
+    uint64_t rdx;
+    uint64_t r8;
+    uint64_t r9;
+    uint64_t r10;
+    uint64_t r11;
+    uint64_t r12;
+    uint64_t r13;
+    uint64_t r14;
+    uint64_t r15;
+    uint64_t rip;
+};
 
 #endif
 
+class Coroutine
+{
+public:
     enum CoroutineState
     {
         PRESTART = 0,    //< 在运行之前，只是存放在队列中，从未执行过
@@ -67,7 +66,7 @@ public:
 
 public:
     void yield();
-    void resume(CoroutineCtx *original_ctx);
+    void resume();
 
 private:
     //virtual void run() = 0;

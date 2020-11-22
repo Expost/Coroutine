@@ -89,7 +89,7 @@ int main()
     //}
 
 
-    Coroutine::CoroutineCtx ctx = { 0 };
+    //CoroutineCtx ctx = { 0 };
     Coroutine co1([](Coroutine* this_) -> void* {
         for (int i = 0; i < 3; i++) {
             printf("co1 value %d\n", i);
@@ -108,17 +108,17 @@ int main()
         return nullptr;
         });
 
-    co1.resume(&ctx);
-    co1.resume(&ctx);
-    co2.resume(&ctx);
-    co2.resume(&ctx);
-    co2.resume(&ctx);
-    co1.resume(&ctx);
+    co1.resume();
+    co1.resume();
+    co2.resume();
+    co2.resume();
+    co2.resume();
+    co1.resume();
 
-    co1.resume(&ctx);
-    co1.resume(&ctx);
-    co1.resume(&ctx);
-    co1.resume(&ctx);
+    co1.resume();
+    co1.resume();
+    co1.resume();
+    co1.resume();
         
     getchar();
     return 0;

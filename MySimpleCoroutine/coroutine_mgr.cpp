@@ -79,8 +79,8 @@ bool CoroutineMgr::run()
         return false;
     }
 
-    Coroutine::CoroutineCtx ctx;
-    t->resume(&ctx);
+    CoroutineCtx ctx;
+    t->resume();
 
     if (t->get_coroutine_state() == Coroutine::FINISHED)
     {
