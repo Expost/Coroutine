@@ -7,13 +7,13 @@
 class MyCoroutine1 :public Coroutine
 {
 private:
-    void run() override
+    void run()
     {
         int sum = 0;
         for (int i = 0; i < 3; i++)
         {
             printf("[Coroutine 1] sum is:%d\n", sum += i);
-            switch_out();
+            yield();
         }
     }
 };
@@ -21,7 +21,7 @@ private:
 class MyCoroutine2 :public Coroutine
 {
 private:
-    void run() override
+    void run()
     {
         func1(1);
         func2();
@@ -32,21 +32,21 @@ private:
         for (int i = 0; i < count; i++)
         {
             printf("[Coroutine 2] i is:%d\n", i);
-            switch_out();
+            yield();
         }
     }
 
     void func2()
     {
         printf("[Coroutine 2] func2 start\n");
-        switch_out();
+        yield();
         func3();
     }
 
     void func3()
     {
         printf("[Coroutine 2] current tid is:%d\n", GetCurrentThreadId());
-        switch_out();
+        yield();
         printf("[Coroutine 2] func3 end.\n");
     }
 };
@@ -77,20 +77,48 @@ DWORD WINAPI my_thread2(LPVOID parm)
 
 int main()
 {
-    CoroutineMgr::get_instance().add_coroutine(new MyCoroutine1);
-    CoroutineMgr::get_instance().add_coroutine(new MyCoroutine2);
+    //CoroutineMgr::get_instance().add_coroutine(new MyCoroutine1);
+    //CoroutineMgr::get_instance().add_coroutine(new MyCoroutine2);
 
-    // 单线程
-    int count = 0;
-    while(CoroutineMgr::get_instance().run())
-    {
-        printf("[main func] count:%d\n\n", count++);
-        Sleep(1000);
-    }
+    //// 单线程
+    //int count = 0;
+    //while(CoroutineMgr::get_instance().run())
+    //{
+    //    printf("[main func] count:%d\n\n", count++);
+    //    Sleep(1000);
+    //}
 
-    // 多线程
-    //CreateThread(NULL, 0, my_thread1, NULL, NULL, 0);
-    //CreateThread(NULL, 0, my_thread2, NULL, NULL, 0);
+
+    Coroutine::CoroutineCtx ctx = { 0 };
+    Coroutine co1([](Coroutine* this_) -> void* {
+        for (int i = 0; i < 3; i++) {
+            printf("co1 value %d\n", i);
+            this_->yield();
+        }
+
+        return nullptr;
+        });
+
+    Coroutine co2([](Coroutine* this_) ->void* {
+        for (int i = 0; i < 3; i++) {
+            printf("co2 value %d\n", i);
+            this_->yield();
+        }
+
+        return nullptr;
+        });
+
+    co1.resume(&ctx);
+    co1.resume(&ctx);
+    co2.resume(&ctx);
+    co2.resume(&ctx);
+    co2.resume(&ctx);
+    co1.resume(&ctx);
+
+    co1.resume(&ctx);
+    co1.resume(&ctx);
+    co1.resume(&ctx);
+    co1.resume(&ctx);
         
     getchar();
     return 0;

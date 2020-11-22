@@ -80,7 +80,7 @@ bool CoroutineMgr::run()
     }
 
     Coroutine::CoroutineCtx ctx;
-    t->switch_in(&ctx);
+    t->resume(&ctx);
 
     if (t->get_coroutine_state() == Coroutine::FINISHED)
     {

@@ -2,7 +2,12 @@
 #ifndef _COROUTINE_H_
 #define _COROUTINE_H_
 
-#include "coroutine_mgr.h"
+//#include "coroutine_mgr.h"
+#include <functional>
+
+
+class Coroutine;
+using CoInterface = std::function<void*(Coroutine* this_)>;
 
 class Coroutine
 {
@@ -45,30 +50,30 @@ public:
 
 #endif
 
-    typedef enum
+    enum CoroutineState
     {
         PRESTART = 0,    //< 在运行之前，只是存放在队列中，从未执行过
         RUNNING,         //< 正在某个线程中执行
         SUSPEND,         //< 挂起，还未执行完，只是通过switch_out函数跳出
         FINISHED         //< 执行完成
-    }CoroutineState;
+    };
 
 public:
-    Coroutine();
+    Coroutine(CoInterface &&co_inf);
     virtual ~Coroutine();
 
 public:
     CoroutineState get_coroutine_state() const;
 
-protected:
-    void switch_out();
+public:
+    void yield();
+    void resume(CoroutineCtx *original_ctx);
 
 private:
-    virtual void run() = 0;
+    //virtual void run() = 0;
 
 private:
     void set_coroutine_state(CoroutineState state);
-    void switch_in(CoroutineCtx *original_ctx);
     void do_switch(CoroutineCtx *from_ctx, CoroutineCtx *to_ctx);
 
 private:
@@ -81,10 +86,7 @@ private:
     uint8_t *stack_;
     CoroutineCtx *original_ctx_;
     CoroutineCtx self_ctx_;
-
-private:
-    /// 设置CoroutineMgr为Coroutine的友元，使其可访问协程的私有方法
-    friend class CoroutineMgr;
+    CoInterface co_inf_;
 };
 
 #endif

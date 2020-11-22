@@ -50,15 +50,15 @@ __declspec(naked) int restore_context(Coroutine::CoroutineCtx *to)
 #else
 extern "C" int save_context(Coroutine::CoroutineCtx *from);
 extern "C" int restore_context(Coroutine::CoroutineCtx *to);
-
 #endif
 
-Coroutine::Coroutine()
+Coroutine::Coroutine(CoInterface &&co_inf)
          : id_(0),
            original_ctx_(NULL),
            state_(PRESTART),
            stack_base_ptr_(NULL),
-           stack_(NULL)
+           stack_(NULL),
+           co_inf_(std::move(co_inf))
 {
     int stack_size = (1 << 20);                         
     this->stack_base_ptr_ = new uint8_t[stack_size + 0x10];  //Ô¤Áô 0x10 ×Ö½ÚµÄ¿Õ¼ä
@@ -75,8 +75,6 @@ Coroutine::Coroutine()
 #else
     self_ctx_.rsp = reinterpret_cast<uintptr_t>(this->stack_);
     self_ctx_.rcx = reinterpret_cast<uintptr_t>(this);
-    //*((uintptr_t*)self_ctx_.rsp) = reinterpret_cast<uintptr_t>(this);
-    //self_ctx_.rsp -= 8;
     self_ctx_.rip = reinterpret_cast<uintptr_t>(wrapper);  //initialize program counter
 #endif
 }
@@ -104,21 +102,26 @@ void Coroutine::wrapper(void *parm)
 {
     Coroutine *coroutine = reinterpret_cast<Coroutine*>(parm);
 
-    coroutine->run();
+    //coroutine->run();
+    coroutine->co_inf_(coroutine);
     coroutine->set_coroutine_state(FINISHED);
 
-    coroutine->switch_out();
+    coroutine->yield();
 }
 
-void Coroutine::switch_in(CoroutineCtx *original_ctx)
+void Coroutine::resume(CoroutineCtx *original_ctx)
 {
-    this->original_ctx_ = original_ctx;
+    if (get_coroutine_state() == FINISHED)
+    {
+        return;
+    }
 
+    this->original_ctx_ = original_ctx;
     do_switch(original_ctx, &self_ctx_);
     set_coroutine_state(get_coroutine_state() != FINISHED ? SUSPEND : FINISHED);
 }
 
-void Coroutine::switch_out()
+void Coroutine::yield()
 {
     do_switch(&self_ctx_, original_ctx_);
 }
