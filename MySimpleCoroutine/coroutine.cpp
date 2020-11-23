@@ -4,7 +4,7 @@
 #include <string.h>
 
 #ifndef _M_X64
-_declspec(naked) int save_context(Coroutine::CoroutineCtx *from)
+_declspec(naked) int save_context(CoroutineCtx *from)
 {
     __asm
     {
@@ -30,7 +30,7 @@ _declspec(naked) int save_context(Coroutine::CoroutineCtx *from)
     }
 }
 
-__declspec(naked) int restore_context(Coroutine::CoroutineCtx *to)
+__declspec(naked) int restore_context(CoroutineCtx *to)
 {
     __asm
     {
@@ -49,7 +49,7 @@ __declspec(naked) int restore_context(Coroutine::CoroutineCtx *to)
 }
 #else
 extern "C" int save_context(CoroutineCtx *from);
-extern "C" uintptr_t restore_context(CoroutineCtx *to, uintptr_t value);
+extern "C" uintptr_t restore_context(CoroutineCtx *to);
 #endif
 
 thread_local CoroutineCtx thread_local_ctx = { 0 };
@@ -60,6 +60,7 @@ Coroutine::Coroutine(CoInterface &&co_inf)
            state_(PRESTART),
            stack_base_ptr_(NULL),
            stack_(NULL),
+           swap_value_(0),
            co_inf_(std::move(co_inf))
 {
     int stack_size = (1 << 20);                         
@@ -119,33 +120,32 @@ uintptr_t Coroutine::resume(uintptr_t value)
     }
 
     //this->original_ctx_ = original_ctx;
-    uintptr_t ret = do_switch(&thread_local_ctx, &self_ctx_, value);
+    self_ctx_.swap_value = value;
+    do_switch(&thread_local_ctx, &self_ctx_);
     set_coroutine_state(get_coroutine_state() != FINISHED ? SUSPEND : FINISHED);
-    return ret;
+    return thread_local_ctx.swap_value;
 }
 
 uintptr_t Coroutine::yield(uintptr_t value)
 {
-    uintptr_t ret = do_switch(&self_ctx_, &thread_local_ctx, value);
-    return ret;
+    thread_local_ctx.swap_value = value;
+    do_switch(&self_ctx_, &thread_local_ctx);
+    return self_ctx_.swap_value;
 }
 
 //#pragma optimize( "", off)
-uintptr_t Coroutine::do_switch(CoroutineCtx *from_ctx, CoroutineCtx *to_ctx, uintptr_t value)
+void Coroutine::do_switch(CoroutineCtx *from_ctx, CoroutineCtx *to_ctx)
 {
     //void* ret_value = nullptr;
     int ret = save_context(from_ctx); //保存上下文, 首次返回会设置eax = 0
     if (ret == 0)
     {
-        return restore_context(to_ctx, value);      //加载to的上下文, jmp之前会设置eax = 1
+        restore_context(to_ctx);      //加载to的上下文, jmp之前会设置eax = 1
     }
     else
     {
         //restored from other threads, just return and continue
     }
-
-    //return ret_value;
-    return ret;
 }
 
 //#pragma optimize( "", on)

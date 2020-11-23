@@ -13,14 +13,15 @@ using CoInterface = std::function<void(Coroutine* this_)>;
 struct CoroutineCtx
 {
     //unsigned int eflag;
-    unsigned int edi; // 0
-    unsigned int esi; // 4
-    unsigned int ebp; // 8
-    unsigned int esp; // 12
-    unsigned int ebx; // 16
-    unsigned int edx; // 20
-    unsigned int ecx; // 24
-    unsigned int eip; // 28
+    uint32_t edi; // 0
+    uint32_t esi; // 4
+    uint32_t ebp; // 8
+    uint32_t esp; // 12
+    uint32_t ebx; // 16
+    uint32_t edx; // 20
+    uint32_t ecx; // 24
+    uint32_t eip; // 28
+    uint32_t swap_value;
 };
 #else
 struct CoroutineCtx
@@ -42,6 +43,7 @@ struct CoroutineCtx
     uint64_t r14;
     uint64_t r15;
     uint64_t rip;
+    uintptr_t swap_value;
 };
 
 #endif
@@ -73,7 +75,7 @@ private:
 
 private:
     void set_coroutine_state(CoroutineState state);
-    uintptr_t do_switch(CoroutineCtx *from_ctx, CoroutineCtx *to_ctx, uintptr_t value);
+    void do_switch(CoroutineCtx *from_ctx, CoroutineCtx *to_ctx);
 
 private:
     static void wrapper(void *parm);
@@ -85,6 +87,7 @@ private:
     uint8_t *stack_;
     CoroutineCtx *original_ctx_;
     CoroutineCtx self_ctx_;
+    uintptr_t swap_value_;
     CoInterface co_inf_;
 };
 

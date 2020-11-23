@@ -92,9 +92,9 @@ int main()
     //CoroutineCtx ctx = { 0 };
     Coroutine co1([](Coroutine* this_){
         for (int i = 0; i < 3; i++) {
-            printf("co1 value %d\n", i);
-            this_->yield((i + 1) * 10);
-            //printf("yield value %llu\n", );
+            //printf("co1 value %d\n", i);
+            
+            printf("yield value %u\n", this_->yield((i + 1) * 10));
         }
 
         });
@@ -107,9 +107,11 @@ int main()
 
         });
 
-    printf("resume value %llu\n", co1.resume(1));
-    printf("resume value %llu\n", co1.resume(2));
-    printf("resume value %llu\n", co1.resume(3));
+    printf("resume value %p\n", co1.resume(1));
+    printf("resume value %p\n", co1.resume(2));
+    printf("resume value %p\n", co1.resume(3));
+    printf("resume value %p\n", co1.resume(4));
+    //printf("resume value %u\n", co1.resume(5));
 
 
     //co2.resume();
