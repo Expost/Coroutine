@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "coroutine.h"
+#include "xco.h"
 //
 //class MyCoroutine1 :public Coroutine
 //{
@@ -91,7 +91,7 @@ int main()
         for (int i = 0; i < 3; i++) {
             //printf("co1 value %d\n", i);
             
-            printf("yield value %llu\n", this_->yield((i + 1) * 10));
+            printf("yield value %d\n", this_->yield((i + 1) * 10));
         }
 
         });
