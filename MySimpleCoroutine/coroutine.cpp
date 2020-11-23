@@ -19,11 +19,12 @@ _declspec(naked) int save_context(CoroutineCtx *from)
         lea esp, [esp - 4];
 
         mov[eax + 16], ebx;
-        mov[eax + 20], edx;
-        mov[eax + 24], ecx;        
+
+        //mov[eax + 20], edx;
+        //mov[eax + 24], ecx;        
 
         push [esp];                 //< 压入该函数的返回地址
-        pop dword ptr[eax + 28];    //< 将返回地址存放在context中的eip字段中
+        pop dword ptr[eax + 20];    //< 将返回地址存放在context中的eip字段中
 
         xor eax, eax;
         ret;
@@ -40,10 +41,11 @@ __declspec(naked) int restore_context(CoroutineCtx *to)
         mov ebp, [eax + 8];
         mov esp, [eax + 12];
         mov ebx, [eax + 16];
-        mov edx, [eax + 20];
-        mov ecx, [eax + 24];
 
-        mov eax, [eax + 28];
+        //mov edx, [eax + 20];
+        //mov ecx, [eax + 24];
+
+        mov eax, [eax + 20];
         jmp eax;
     }
 }
@@ -60,7 +62,6 @@ Coroutine::Coroutine(CoInterface &&co_inf)
            state_(PRESTART),
            stack_base_ptr_(NULL),
            stack_(NULL),
-           swap_value_(0),
            co_inf_(std::move(co_inf))
 {
     int stack_size = (1 << 20);                         

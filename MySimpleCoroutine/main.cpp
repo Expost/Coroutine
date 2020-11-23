@@ -94,7 +94,7 @@ int main()
         for (int i = 0; i < 3; i++) {
             //printf("co1 value %d\n", i);
             
-            printf("yield value %u\n", this_->yield((i + 1) * 10));
+            printf("yield value %llu\n", this_->yield((i + 1) * 10));
         }
 
         });

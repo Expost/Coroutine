@@ -18,8 +18,10 @@ struct CoroutineCtx
     uint32_t ebp; // 8
     uint32_t esp; // 12
     uint32_t ebx; // 16
-    uint32_t edx; // 20
-    uint32_t ecx; // 24
+    
+    //uint32_t edx; // 20
+    //uint32_t ecx; // 24
+    
     uint32_t eip; // 28
     uint32_t swap_value;
 };
@@ -32,12 +34,13 @@ struct CoroutineCtx
     uint64_t rbp;
     uint64_t rsp;
     uint64_t rbx;
+
     uint64_t rcx;
-    uint64_t rdx;
-    uint64_t r8;
-    uint64_t r9;
-    uint64_t r10;
-    uint64_t r11;
+    //uint64_t rdx;
+    //uint64_t r8;
+    //uint64_t r9;
+    //uint64_t r10;
+    //uint64_t r11;
     uint64_t r12;
     uint64_t r13;
     uint64_t r14;
@@ -87,7 +90,6 @@ private:
     uint8_t *stack_;
     CoroutineCtx *original_ctx_;
     CoroutineCtx self_ctx_;
-    uintptr_t swap_value_;
     CoInterface co_inf_;
 };
 
