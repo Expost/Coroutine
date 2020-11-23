@@ -1,10 +1,7 @@
-
 #ifndef _COROUTINE_H_
 #define _COROUTINE_H_
 
-//#include "coroutine_mgr.h"
 #include <functional>
-
 
 class Coroutine;
 using CoInterface = std::function<void(Coroutine* this_)>;
@@ -38,7 +35,6 @@ struct CoroutineCtx
     uint64_t rip;
     uintptr_t swap_value;
 };
-
 #endif
 
 class Coroutine
@@ -62,9 +58,6 @@ public:
 public:
     uintptr_t yield(uintptr_t value);
     uintptr_t resume(uintptr_t value);
-
-private:
-    //virtual void run() = 0;
 
 private:
     void set_coroutine_state(CoroutineState state);

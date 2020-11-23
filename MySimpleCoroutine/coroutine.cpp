@@ -75,11 +75,11 @@ Coroutine::Coroutine(CoInterface &&co_inf)
     *((long*)self_ctx_.esp) = reinterpret_cast<uintptr_t>(this);
 
     self_ctx_.esp -= 4;
-    self_ctx_.eip = reinterpret_cast<uintptr_t>(wrapper);  //initialize program counter
+    self_ctx_.eip = reinterpret_cast<uintptr_t>(wrapper);
 #else
     self_ctx_.rsp = reinterpret_cast<uintptr_t>(this->stack_);
     self_ctx_.rcx = reinterpret_cast<uintptr_t>(this);
-    self_ctx_.rip = reinterpret_cast<uintptr_t>(wrapper);  //initialize program counter
+    self_ctx_.rip = reinterpret_cast<uintptr_t>(wrapper);
 #endif
 }
 
@@ -105,11 +105,8 @@ void Coroutine::set_coroutine_state(CoroutineState state)
 void Coroutine::wrapper(void *parm)
 {
     Coroutine *coroutine = reinterpret_cast<Coroutine*>(parm);
-
-    //coroutine->run();
     coroutine->co_inf_(coroutine);
     coroutine->set_coroutine_state(FINISHED);
-
     coroutine->yield(0);
 }
 
@@ -120,7 +117,6 @@ uintptr_t Coroutine::resume(uintptr_t value)
         return 0;
     }
 
-    //this->original_ctx_ = original_ctx;
     self_ctx_.swap_value = value;
     do_switch(&thread_local_ctx, &self_ctx_);
     set_coroutine_state(get_coroutine_state() != FINISHED ? SUSPEND : FINISHED);
@@ -134,10 +130,8 @@ uintptr_t Coroutine::yield(uintptr_t value)
     return self_ctx_.swap_value;
 }
 
-//#pragma optimize( "", off)
 void Coroutine::do_switch(CoroutineCtx *from_ctx, CoroutineCtx *to_ctx)
 {
-    //void* ret_value = nullptr;
     int ret = save_context(from_ctx); //保存上下文, 首次返回会设置eax = 0
     if (ret == 0)
     {
@@ -148,5 +142,3 @@ void Coroutine::do_switch(CoroutineCtx *from_ctx, CoroutineCtx *to_ctx)
         //restored from other threads, just return and continue
     }
 }
-
-//#pragma optimize( "", on)
