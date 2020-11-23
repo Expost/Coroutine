@@ -7,7 +7,7 @@
 
 
 class Coroutine;
-using CoInterface = std::function<void*(Coroutine* this_)>;
+using CoInterface = std::function<void(Coroutine* this_)>;
 
 #ifndef _M_X64
 struct CoroutineCtx
@@ -65,15 +65,15 @@ public:
     CoroutineState get_coroutine_state() const;
 
 public:
-    void yield();
-    void resume();
+    uintptr_t yield(uintptr_t value);
+    uintptr_t resume(uintptr_t value);
 
 private:
     //virtual void run() = 0;
 
 private:
     void set_coroutine_state(CoroutineState state);
-    void do_switch(CoroutineCtx *from_ctx, CoroutineCtx *to_ctx);
+    uintptr_t do_switch(CoroutineCtx *from_ctx, CoroutineCtx *to_ctx, uintptr_t value);
 
 private:
     static void wrapper(void *parm);

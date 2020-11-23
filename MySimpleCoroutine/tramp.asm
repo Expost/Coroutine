@@ -31,13 +31,16 @@ save_context ENDP
 
 restore_context proc
     mov rax, rcx
+    
     mov rdi, [rax]
     mov rsi, [rax + 8]
     mov rbp, [rax + 16]
     mov rsp, [rax + 24]
     mov rbx, [rax + 32]
     mov rcx, [rax + 40]
-    mov rdx, [rax + 48]
+    
+    ;mov rdx, [rax + 48] ;rdx是易失的，保存传入的第二个参数
+    
     mov r8, [rax + 56]
     mov r9, [rax + 64]
     mov r10, [rax + 72]
@@ -46,8 +49,12 @@ restore_context proc
     mov r13, [rax + 96]
     mov r14, [rax + 104]
     mov r15, [rax + 112]
-    mov rax, [rax + 120]
-    jmp rax
+    ;mov rax, [rax + 120]
+    ;jmp rax
+    
+    push [rax + 120]
+    mov rax, rdx
+    ret
 restore_context ENDP
 
 

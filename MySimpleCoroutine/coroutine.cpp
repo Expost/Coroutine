@@ -49,7 +49,7 @@ __declspec(naked) int restore_context(Coroutine::CoroutineCtx *to)
 }
 #else
 extern "C" int save_context(CoroutineCtx *from);
-extern "C" int restore_context(CoroutineCtx *to);
+extern "C" uintptr_t restore_context(CoroutineCtx *to, uintptr_t value);
 #endif
 
 thread_local CoroutineCtx thread_local_ctx = { 0 };
@@ -108,38 +108,44 @@ void Coroutine::wrapper(void *parm)
     coroutine->co_inf_(coroutine);
     coroutine->set_coroutine_state(FINISHED);
 
-    coroutine->yield();
+    coroutine->yield(0);
 }
 
-void Coroutine::resume()
+uintptr_t Coroutine::resume(uintptr_t value)
 {
     if (get_coroutine_state() == FINISHED)
     {
-        return;
+        return 0;
     }
 
     //this->original_ctx_ = original_ctx;
-    do_switch(&thread_local_ctx, &self_ctx_);
+    uintptr_t ret = do_switch(&thread_local_ctx, &self_ctx_, value);
     set_coroutine_state(get_coroutine_state() != FINISHED ? SUSPEND : FINISHED);
+    return ret;
 }
 
-void Coroutine::yield()
+uintptr_t Coroutine::yield(uintptr_t value)
 {
-    do_switch(&self_ctx_, &thread_local_ctx);
+    uintptr_t ret = do_switch(&self_ctx_, &thread_local_ctx, value);
+    return ret;
 }
 
 //#pragma optimize( "", off)
-void Coroutine::do_switch(CoroutineCtx *from_ctx, CoroutineCtx *to_ctx)
+uintptr_t Coroutine::do_switch(CoroutineCtx *from_ctx, CoroutineCtx *to_ctx, uintptr_t value)
 {
+    //void* ret_value = nullptr;
     int ret = save_context(from_ctx); //保存上下文, 首次返回会设置eax = 0
     if (ret == 0)
     {
-        restore_context(to_ctx);      //加载to的上下文, jmp之前会设置eax = 1
+        return restore_context(to_ctx, value);      //加载to的上下文, jmp之前会设置eax = 1
     }
     else
     {
         //restored from other threads, just return and continue
     }
+
+    //return ret_value;
+    return ret;
 }
 
 //#pragma optimize( "", on)
