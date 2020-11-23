@@ -12,35 +12,25 @@ using CoInterface = std::function<void(Coroutine* this_)>;
 #ifndef _M_X64
 struct CoroutineCtx
 {
-    //unsigned int eflag;
-    uint32_t edi; // 0
-    uint32_t esi; // 4
-    uint32_t ebp; // 8
-    uint32_t esp; // 12
-    uint32_t ebx; // 16
-    
-    //uint32_t edx; // 20
-    //uint32_t ecx; // 24
-    
-    uint32_t eip; // 28
+    uint32_t eflag;
+    uint32_t edi;
+    uint32_t esi;
+    uint32_t ebp;
+    uint32_t esp;
+    uint32_t ebx;
+    uint32_t eip;
     uint32_t swap_value;
 };
 #else
 struct CoroutineCtx
 {
-    //unsigned int eflag;
+    uint64_t eflag;
     uint64_t rdi;
     uint64_t rsi;
     uint64_t rbp;
     uint64_t rsp;
     uint64_t rbx;
-
     uint64_t rcx;
-    //uint64_t rdx;
-    //uint64_t r8;
-    //uint64_t r9;
-    //uint64_t r10;
-    //uint64_t r11;
     uint64_t r12;
     uint64_t r13;
     uint64_t r14;

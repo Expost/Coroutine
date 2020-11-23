@@ -9,22 +9,23 @@ _declspec(naked) int save_context(CoroutineCtx *from)
     __asm
     {
         mov eax, [esp + 4];     // 取参
-        mov[eax], edi;
-        mov[eax + 4], esi;
-        mov[eax + 8], ebp;
+        
+        // 保存状态寄存器
+        pushfd;
+        pop dword ptr[eax];
+         
+        mov[eax + 4], edi;
+        mov[eax + 8], esi;
+        mov[eax + 12], ebp;
 
-        //lea ebp, [esp + 4];
         lea esp, [esp + 4];
-        mov[eax + 12], esp;     // ebp保存后已经无用了，这里借用ebp存储修正后的值
+        mov[eax + 16], esp;
         lea esp, [esp - 4];
 
-        mov[eax + 16], ebx;
-
-        //mov[eax + 20], edx;
-        //mov[eax + 24], ecx;        
+        mov[eax + 20], ebx;
 
         push [esp];                 //< 压入该函数的返回地址
-        pop dword ptr[eax + 20];    //< 将返回地址存放在context中的eip字段中
+        pop dword ptr[eax + 24];    //< 将返回地址存放在context中的eip字段中
 
         xor eax, eax;
         ret;
@@ -36,16 +37,15 @@ __declspec(naked) int restore_context(CoroutineCtx *to)
     __asm
     {
         mov eax, [esp + 4];
-        mov edi, [eax];
-        mov esi, [eax + 4];
-        mov ebp, [eax + 8];
-        mov esp, [eax + 12];
-        mov ebx, [eax + 16];
+        push dword ptr[eax];
+        popfd;
 
-        //mov edx, [eax + 20];
-        //mov ecx, [eax + 24];
-
-        mov eax, [eax + 20];
+        mov edi, [eax + 4];
+        mov esi, [eax + 8];
+        mov ebp, [eax + 12];
+        mov esp, [eax + 16];
+        mov ebx, [eax + 20];
+        mov eax, [eax + 24];
         jmp eax;
     }
 }

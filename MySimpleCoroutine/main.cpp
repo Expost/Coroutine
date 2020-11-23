@@ -1,7 +1,4 @@
-
-
 #include <stdio.h>
-#include "coroutine_mgr.h"
 #include "coroutine.h"
 //
 //class MyCoroutine1 :public Coroutine
