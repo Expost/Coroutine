@@ -51,7 +51,7 @@ __declspec(naked) int restore_context(CoroutineCtx *to)
 }
 #else
 extern "C" int save_context(CoroutineCtx *from);
-extern "C" uintptr_t restore_context(CoroutineCtx *to);
+extern "C" int restore_context(CoroutineCtx *to);
 #endif
 
 thread_local CoroutineCtx thread_local_ctx = { 0 };
