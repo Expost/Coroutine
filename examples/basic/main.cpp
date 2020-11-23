@@ -1,5 +1,6 @@
 #include <stdio.h>
-#include "xco.h"
+#include "xco/xco.h"
+
 //
 //class MyCoroutine1 :public Coroutine
 //{

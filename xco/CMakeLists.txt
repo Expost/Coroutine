@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(XCO CXX C ASM_MASM)
+project(xco CXX C ASM_MASM)
 
 file(GLOB_RECURSE SRC_FILES_CPP *.cpp)
 file(GLOB_RECURSE HEADER_FILES *.h)
@@ -17,8 +17,7 @@ else()
 endif()
 
 
-
-add_executable(xco_demo  
+add_library(libxco STATIC
     ${SRC_FILES_CPP}
     ${HEADER_FILES}
     ${SRC_FILES_ASM})
