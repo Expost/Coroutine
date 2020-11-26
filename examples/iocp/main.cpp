@@ -1,5 +1,6 @@
 #include <winsock2.h>
 #include <stdio.h>
+#include "xco/xco.h"
 #pragma comment(lib,"ws2_32.lib")
 
 #define PORT 5000
@@ -12,6 +13,7 @@ typedef struct {
     WSABUF WsaBuf;
     char buffer[MSGSIZE];
     DWORD RecvBytes;
+    Coroutine* co;
 }MyOverData, *LPMyOverData;
 
 //该结构体包含套接字信息，用来作为完成键
@@ -22,6 +24,9 @@ typedef struct {
 
 //服务线程
 DWORD WINAPI ServerThread(LPVOID lpParam);
+
+void co(Coroutine* this_, SOCKET client_socks);
+
 
 int main() {
 
@@ -75,6 +80,8 @@ int main() {
         lpmysockdata->sockaddr = ClientAddr;
         lpmyoverdata->WsaBuf.len = MSGSIZE;
         lpmyoverdata->WsaBuf.buf = lpmyoverdata->buffer;
+        lpmyoverdata->co = new Coroutine(std::bind(co, std::placeholders::_1, sAccept));
+        lpmyoverdata->co->resume(0);
 
         //这里是该函数的第二个用途，将套接字和完成端口进行绑定，并将自定义的结构体作为完成键参数
         CreateIoCompletionPort((HANDLE)sAccept, CompletionPort, (DWORD)lpmysockdata, 0);
@@ -86,7 +93,24 @@ int main() {
     return 0;
 }
 
+void co(Coroutine* this_, SOCKET client_socks)
+{
+    char msg[4096] = { 0 };
+    LPMyOverData data = reinterpret_cast<LPMyOverData>(this_->yield(0));
+    
+    printf("recv_data_len %d, buf %s\n", data->WsaBuf.len, data->buffer);
+    _snprintf_s(msg, _TRUNCATE, "first data");
+    send(client_socks, msg, strlen(msg) + 1, 0);
+    data = reinterpret_cast<LPMyOverData>(this_->yield(0));
+    printf("recv_data_len %d, buf %s\n", data->WsaBuf.len, data->buffer);
 
+
+    _snprintf_s(msg, _TRUNCATE, "second data");
+    send(client_socks, msg, strlen(msg) + 1, 0);
+    data = reinterpret_cast<LPMyOverData>(this_->yield(0));
+    printf("recv_data_len %d, buf %s\n", data->WsaBuf.len, data->buffer);
+    closesocket(client_socks);
+}
 
 DWORD WINAPI ServerThread(LPVOID lpParam) {
     //从线程参数中获取完成端口句柄
@@ -122,9 +146,20 @@ DWORD WINAPI ServerThread(LPVOID lpParam) {
 
         //收到消息，进行消息处理
         else {
-            printf("%s\n", lpmyoverdata->buffer);
-            char msg[] = "收到消息!";
-            send(lpmysockdata->s, msg, sizeof(msg), 0);
+            if (lpmyoverdata->co->get_coroutine_state() != Coroutine::FINISHED)
+            {
+                printf("he123\n");
+                lpmyoverdata->co->resume((uintptr_t)lpmyoverdata);
+            }
+            else
+            {
+                printf("coroutine finished.\n");
+                closesocket(lpmysockdata->s);
+            }
+
+            //printf("%s\n", lpmyoverdata->buffer);
+            //char msg[] = "收到消息!";
+            //send(lpmysockdata->s, msg, sizeof(msg), 0);
         }
 
         //重置变量
