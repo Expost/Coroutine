@@ -1,6 +1,5 @@
+IFDEF RAX
 .CODE
-public save_context
-public restore_context
 
 save_context proc
     mov rax, rcx
@@ -50,5 +49,51 @@ restore_context proc
     jmp rax
 restore_context ENDP
 
+
+ELSE
+
+.386
+.MODEL FLAT,C
+.CODE
+
+save_context proc
+    mov eax, [esp + 4];
+        
+    pushfd;
+    pop dword ptr[eax];
+         
+    mov[eax + 4], edi;
+    mov[eax + 8], esi;
+    mov[eax + 12], ebp;
+
+    lea esp, [esp + 4];
+    mov[eax + 16], esp;
+    lea esp, [esp - 4];
+
+    mov[eax + 20], ebx;
+
+    push [esp];
+    pop dword ptr[eax + 24];
+
+    xor eax, eax;
+    ret;
+save_context ENDP
+
+
+restore_context proc
+    mov eax, [esp + 4];
+    push dword ptr[eax];
+    popfd;
+
+    mov edi, [eax + 4];
+    mov esi, [eax + 8];
+    mov ebp, [eax + 12];
+    mov esp, [eax + 16];
+    mov ebx, [eax + 20];
+    mov eax, [eax + 24];
+    jmp eax;
+restore_context ENDP
+
+ENDIF
 
 END

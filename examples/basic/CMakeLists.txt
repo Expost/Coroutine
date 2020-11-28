@@ -8,6 +8,10 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source" FILES
   ${SRC_FILES_CPP}
   ${HEADER_FILES})
 
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    set(CMAKE_EXE_LINKER_FLAGS "/SAFESEH:NO")
+endif()
+
 add_executable(basic_demo  
     ${SRC_FILES_CPP}
     ${HEADER_FILES})

@@ -3,56 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef _M_X64
-_declspec(naked) int save_context(CoroutineCtx *from)
-{
-    __asm
-    {
-        mov eax, [esp + 4];     // 取参
-        
-        // 保存状态寄存器
-        pushfd;
-        pop dword ptr[eax];
-         
-        mov[eax + 4], edi;
-        mov[eax + 8], esi;
-        mov[eax + 12], ebp;
-
-        lea esp, [esp + 4];
-        mov[eax + 16], esp;
-        lea esp, [esp - 4];
-
-        mov[eax + 20], ebx;
-
-        push [esp];                 //< 压入该函数的返回地址
-        pop dword ptr[eax + 24];    //< 将返回地址存放在context中的eip字段中
-
-        xor eax, eax;
-        ret;
-    }
-}
-
-__declspec(naked) int restore_context(CoroutineCtx *to)
-{
-    __asm
-    {
-        mov eax, [esp + 4];
-        push dword ptr[eax];
-        popfd;
-
-        mov edi, [eax + 4];
-        mov esi, [eax + 8];
-        mov ebp, [eax + 12];
-        mov esp, [eax + 16];
-        mov ebx, [eax + 20];
-        mov eax, [eax + 24];
-        jmp eax;
-    }
-}
-#else
 extern "C" int save_context(CoroutineCtx *from);
 extern "C" int restore_context(CoroutineCtx *to);
-#endif
 
 thread_local CoroutineCtx thread_local_ctx = { 0 };
 
