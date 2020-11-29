@@ -5,6 +5,7 @@
 
 extern "C" int save_context(CoroutineCtx *from);
 extern "C" int restore_context(CoroutineCtx *to);
+extern "C" void switch_context(CoroutineCtx *from, CoroutineCtx *to);
 
 thread_local CoroutineCtx thread_local_ctx = { 0 };
 
@@ -70,7 +71,8 @@ uintptr_t Coroutine::resume(uintptr_t value)
     }
 
     self_ctx_.swap_value = value;
-    do_switch(&thread_local_ctx, &self_ctx_);
+    //do_switch(&thread_local_ctx, &self_ctx_);
+    switch_context(&thread_local_ctx, &self_ctx_);
     set_coroutine_state(get_coroutine_state() != FINISHED ? SUSPEND : FINISHED);
     return thread_local_ctx.swap_value;
 }
@@ -78,7 +80,8 @@ uintptr_t Coroutine::resume(uintptr_t value)
 uintptr_t Coroutine::yield(uintptr_t value)
 {
     thread_local_ctx.swap_value = value;
-    do_switch(&self_ctx_, &thread_local_ctx);
+    // do_switch(&self_ctx_, &thread_local_ctx);
+    switch_context(&self_ctx_, &thread_local_ctx);
     return self_ctx_.swap_value;
 }
 

@@ -1,6 +1,47 @@
 IFDEF RAX
 .CODE
 
+
+; rcx from_co
+; rdx to_co
+; r8, r9, r10, r11
+switch_context proc
+    pushfq
+    pop [rcx]
+    lea r8, [rsp + 8]    ; rsp
+
+    mov [rcx + 8], rdi
+    mov [rcx + 16], rsi
+    mov [rcx + 24], rbp
+    mov [rcx + 32], r8
+    mov [rcx + 40], rbx
+    mov [rcx + 48], rcx
+    mov [rcx + 56], r12
+    mov [rcx + 64], r13
+    mov [rcx + 72], r14
+    mov [rcx + 80], r15
+    push [rsp]           ; ret addr
+    pop qword ptr[rcx + 88]
+
+    ; restore
+    push [rdx]
+    popfq
+    mov rdi, [rdx + 8]
+    mov rsi, [rdx + 16]
+    mov rbp, [rdx + 24]
+    mov rsp, [rdx + 32]
+    mov rbx, [rdx + 40]
+    mov rcx, [rdx + 48]
+    mov r12, [rdx + 56]
+    mov r13, [rdx + 64]
+    mov r14, [rdx + 72]
+    mov r15, [rdx + 80]
+    ;mov rax, [rdx + 88]
+    jmp qword ptr[rdx + 88]
+
+switch_context endp
+
+
 save_context proc
     mov rax, rcx
     
