@@ -97,6 +97,38 @@ ELSE
 .MODEL FLAT,C
 .CODE
 
+; arg1   [esp + 4]
+; arg2   [esp + 8]
+
+switch_context proc
+    mov eax, [esp + 4]
+    lea edx, [esp + 4]
+
+    pushfd
+    pop dword ptr[eax]
+    mov [eax + 4], edi
+    mov [eax + 8], esi
+    mov [eax + 12], ebp
+    mov [eax + 16], edx
+    mov [eax + 20], ebx;
+    push [esp];
+    pop dword ptr[eax + 24]
+
+    ; restore
+    mov eax, [esp + 8]
+    push dword ptr[eax];
+    popfd;
+
+    mov edi, [eax + 4]
+    mov esi, [eax + 8]
+    mov ebp, [eax + 12]
+    mov esp, [eax + 16]
+    mov ebx, [eax + 20]
+    mov eax, [eax + 24]
+    jmp eax
+
+switch_context endp
+
 save_context proc
     mov eax, [esp + 4];
         

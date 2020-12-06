@@ -3,9 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _Win32
 extern "C" int save_context(CoroutineCtx *from);
 extern "C" int restore_context(CoroutineCtx *to);
 extern "C" void switch_context(CoroutineCtx *from, CoroutineCtx *to);
+#else
+extern int switch_context(CoroutineCtx *from, CoroutineCtx *to) __asm__("switch_context");
+#endif
 
 thread_local CoroutineCtx thread_local_ctx = { 0 };
 
@@ -23,15 +27,19 @@ Coroutine::Coroutine(CoInterface &&co_inf)
 
     memset(&self_ctx_, 0, sizeof(self_ctx_));
 
-#ifndef _M_X64
+#ifdef __i386__ || _M_X86
     self_ctx_.esp = reinterpret_cast<uintptr_t>(this->stack_);
     *((long*)self_ctx_.esp) = reinterpret_cast<uintptr_t>(this);
 
     self_ctx_.esp -= 4;
     self_ctx_.eip = reinterpret_cast<uintptr_t>(wrapper);
-#else
+#elif _M_X64
     self_ctx_.rsp = reinterpret_cast<uintptr_t>(this->stack_);
     self_ctx_.rcx = reinterpret_cast<uintptr_t>(this);
+    self_ctx_.rip = reinterpret_cast<uintptr_t>(wrapper);
+#elif __x86_64__
+    self_ctx_.rsp = reinterpret_cast<uintptr_t>(this->stack_);
+    self_ctx_.rdi = reinterpret_cast<uintptr_t>(this);
     self_ctx_.rip = reinterpret_cast<uintptr_t>(wrapper);
 #endif
 }
@@ -85,15 +93,15 @@ uintptr_t Coroutine::yield(uintptr_t value)
     return self_ctx_.swap_value;
 }
 
-void Coroutine::do_switch(CoroutineCtx *from_ctx, CoroutineCtx *to_ctx)
-{
-    int ret = save_context(from_ctx); //保存上下文, 首次返回会设置eax = 0
-    if (ret == 0)
-    {
-        restore_context(to_ctx);      //加载to的上下文, jmp之前会设置eax = 1
-    }
-    else
-    {
-        //restored from other threads, just return and continue
-    }
-}
+// void Coroutine::do_switch(CoroutineCtx *from_ctx, CoroutineCtx *to_ctx)
+// {
+//     int ret = save_context(from_ctx); //保存上下文, 首次返回会设置eax = 0
+//     if (ret == 0)
+//     {
+//         restore_context(to_ctx);      //加载to的上下文, jmp之前会设置eax = 1
+//     }
+//     else
+//     {
+//         //restored from other threads, just return and continue
+//     }
+// }

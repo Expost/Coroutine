@@ -2,11 +2,12 @@
 #define _COROUTINE_H_
 
 #include <functional>
+#include <stdint.h>
 
 class Coroutine;
 using CoInterface = std::function<void(Coroutine* this_)>;
 
-#ifndef _M_X64
+#ifdef __i386__ || _M_X86
 struct CoroutineCtx
 {
     uint32_t eflag;
@@ -18,7 +19,7 @@ struct CoroutineCtx
     uint32_t eip;
     uint32_t swap_value;
 };
-#else
+#elif _M_X64
 struct CoroutineCtx
 {
     uint64_t eflag;
@@ -28,6 +29,23 @@ struct CoroutineCtx
     uint64_t rsp;
     uint64_t rbx;
     uint64_t rcx;
+    uint64_t r12;
+    uint64_t r13;
+    uint64_t r14;
+    uint64_t r15;
+    uint64_t rip;
+    uintptr_t swap_value;
+};
+#elif __x86_64__
+struct CoroutineCtx
+{
+    uint64_t eflag;
+    uint64_t r10;
+    uint64_t r11;
+    uint64_t rbp;
+    uint64_t rsp;
+    uint64_t rbx;
+    uint64_t rdi;
     uint64_t r12;
     uint64_t r13;
     uint64_t r14;
