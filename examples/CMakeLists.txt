@@ -5,4 +5,6 @@ add_subdirectory(basic basic_demo)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     add_subdirectory(iocp iocp_demo)
+elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    add_subdirectory(epoll epoll_demo)
 endif()
