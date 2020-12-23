@@ -2,6 +2,8 @@
 #define __CLIENT_H_
 
 #include "trans.h"
+#include <netdb.h>
+#include <arpa/inet.h>
 
 class Client : public Trans
 {
@@ -45,20 +47,26 @@ public:
             return;
         }
 
+        uint32_t ip = 0;
         switch (buf[3])
         {
         case 1:
         {
-            char ip[16] = {0};
-            memcpy(ip, &buf[4], 16);
+            memcpy(&ip, &buf[4], sizeof(ip));
             printf("ip is %s\n", ip);
             break;
         }
         case 3:
         {
             char name[100] = {0};
-            memcpy(name, &buf[5], n - 2 - 4);
+            memcpy(name, &buf[5], n - 7);
             printf("domain name is %s\n", name);
+            struct hostent *ht = gethostbyname(name);
+            //memcpy(&ip, &ht->h_addr_list[0], sizeof(ip));
+            printf("ht is %p\n", ht);
+            char    tmp_ip[50];
+            const char *ptr = inet_ntop(ht->h_addrtype, ht->h_addr_list[0], tmp_ip, sizeof(tmp_ip));
+            printf("ip is %s\n", tmp_ip);
             break;
         }
         default:

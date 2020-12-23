@@ -10,7 +10,7 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source" FILES
 
 include_directories(../../xco)
 
-set(CMAKE_CXX_FLAGS -std=c++11)
+set(CMAKE_CXX_FLAGS "-std=c++11 -g")
 add_executable(simple_proxy  
     ${SRC_FILES_CPP}
     ${HEADER_FILES})
