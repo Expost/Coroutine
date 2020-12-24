@@ -21,8 +21,9 @@ Coroutine::Coroutine(CoInterface &&co_inf)
            stack_(NULL),
            co_inf_(std::move(co_inf))
 {
-    int stack_size = (1 << 20);                         
+    int stack_size = (1 << 25);                         
     this->stack_base_ptr_ = new uint8_t[stack_size + 0x10];  //预留 0x10 字节的空间
+    this->stack_base_ptr_ += 0x8;
     this->stack_ = this->stack_base_ptr_ + stack_size;   //栈是从上往下增长的，因此栈基址要指向最大处
 
     memset(&self_ctx_, 0, sizeof(self_ctx_));
@@ -46,9 +47,10 @@ Coroutine::Coroutine(CoInterface &&co_inf)
 
 Coroutine::~Coroutine()
 {
+    stack_base_ptr_ -= 0x8;
     if (stack_base_ptr_ != NULL)
     {
-        delete stack_base_ptr_;
+        delete[] stack_base_ptr_;
         stack_base_ptr_ = NULL;
     }
 }

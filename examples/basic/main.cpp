@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include "xco/xco.h"
+#include <netdb.h>
+#include <arpa/inet.h>
 
 //
 //class MyCoroutine1 :public Coroutine
@@ -75,49 +77,20 @@
 
 int main()
 {
-    //CoroutineMgr::get_instance().add_coroutine(new MyCoroutine1);
-    //CoroutineMgr::get_instance().add_coroutine(new MyCoroutine2);
+    Coroutine co1([](Coroutine *this_) {
+        //printf("co1 value %d\n", i);
+        struct hostent *ht = gethostbyname("www.baidu.com");
 
-    //// µ¥Ïß³Ì
-    //int count = 0;
-    //while(CoroutineMgr::get_instance().run())
-    //{
-    //    printf("[main func] count:%d\n\n", count++);
-    //    Sleep(1000);
-    //}
-
-
-    //CoroutineCtx ctx = { 0 };
-    Coroutine co1([](Coroutine* this_){
-        for (int i = 0; i < 3; i++) {
-            //printf("co1 value %d\n", i);
-            
-            printf("yield value %d\n", this_->yield((i + 1) * 10));
-        }
-
-        });
-
-    Coroutine co2([](Coroutine* this_) {
-        for (int i = 0; i < 3; i++) {
-            printf("co2 value %d\n", i);
-            //this_->yield();
-        }
-
-        });
+        const char *ptr = NULL;
+        char ip[50];
+        ptr = inet_ntop(ht->h_addrtype, ht->h_addr_list[0], ip, sizeof(ip));
+        //??inet_ntop???IP???ptr?
+        printf("%s\n", ptr);
+    });
 
     printf("resume value %p\n", co1.resume(1));
-    printf("resume value %p\n", co1.resume(2));
-    printf("resume value %p\n", co1.resume(3));
-    printf("resume value %p\n", co1.resume(4));
-    //printf("resume value %u\n", co1.resume(5));
 
 
-    //co2.resume();
-    //co2.resume();
-    //co2.resume();
-
-
-        
     getchar();
     return 0;
 }

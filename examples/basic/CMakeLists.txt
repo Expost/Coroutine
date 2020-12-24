@@ -12,7 +12,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     set(CMAKE_EXE_LINKER_FLAGS "/SAFESEH:NO")
 endif()
 
-set(CMAKE_CXX_FLAGS -std=c++11)
+set(CMAKE_CXX_FLAGS "-std=c++11 -g")
 
 add_executable(basic_demo  
     ${SRC_FILES_CPP}

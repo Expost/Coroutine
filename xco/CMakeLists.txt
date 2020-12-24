@@ -18,7 +18,7 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source" FILES
   ${HEADER_FILES}
   ${SRC_FILES_ASM})
 
-set(CMAKE_CXX_FLAGS -std=c++11)
+set(CMAKE_CXX_FLAGS "-std=c++11 -g")
 
 add_library(libxco STATIC
     ${SRC_FILES_CPP}

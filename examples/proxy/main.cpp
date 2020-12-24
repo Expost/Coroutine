@@ -47,7 +47,7 @@ int main()
     epoll_ctl(epfd, EPOLL_CTL_ADD, listenfd, &ev);
     bzero(&serveraddr, sizeof(serveraddr));
     serveraddr.sin_family = AF_INET;
-    char *local_addr = "127.0.0.1";
+    char *local_addr = "0.0.0.0";
     inet_aton(local_addr, &(serveraddr.sin_addr));
     serveraddr.sin_port = htons(5000);
     bind(listenfd, (sockaddr *)&serveraddr, sizeof(serveraddr));
