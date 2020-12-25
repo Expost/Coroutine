@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include "xco/xco.h"
-#include <netdb.h>
-#include <arpa/inet.h>
+//#include <netdb.h>
+//#include <arpa/inet.h>
+#include <windows.h>
 
 //
 //class MyCoroutine1 :public Coroutine
@@ -79,18 +80,21 @@ int main()
 {
     Coroutine co1([](Coroutine *this_) {
         //printf("co1 value %d\n", i);
-        struct hostent *ht = gethostbyname("www.baidu.com");
+        //struct hostent *ht = gethostbyname("www.baidu.com");
 
-        const char *ptr = NULL;
-        char ip[50];
-        ptr = inet_ntop(ht->h_addrtype, ht->h_addr_list[0], ip, sizeof(ip));
+        //const char *ptr = NULL;
+        //char ip[50];
+        //ptr = inet_ntop(ht->h_addrtype, ht->h_addr_list[0], ip, sizeof(ip));
         //??inet_ntop???IP???ptr?
-        printf("%s\n", ptr);
+        //printf("%s\n", ptr);
+
+        OutputDebugStringA("hahahah\n");
+        printf("value is %d\n", 10);
     });
 
     printf("resume value %p\n", co1.resume(1));
 
 
-    getchar();
+    //getchar();
     return 0;
 }

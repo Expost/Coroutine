@@ -7,7 +7,7 @@
 class Coroutine;
 using CoInterface = std::function<void(Coroutine* this_)>;
 
-#ifdef __i386__ || _M_X86
+#ifdef /*__i386__ ||*/ _M_X86
 struct CoroutineCtx
 {
     uint32_t eflag;

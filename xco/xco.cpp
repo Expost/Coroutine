@@ -8,7 +8,7 @@ extern "C" int save_context(CoroutineCtx *from);
 extern "C" int restore_context(CoroutineCtx *to);
 extern "C" void switch_context(CoroutineCtx *from, CoroutineCtx *to);
 #else
-extern int switch_context(CoroutineCtx *from, CoroutineCtx *to) __asm__("switch_context");
+extern "C" int switch_context(CoroutineCtx *from, CoroutineCtx *to); //__asm__("switch_context");
 #endif
 
 thread_local CoroutineCtx thread_local_ctx = { 0 };
@@ -23,12 +23,11 @@ Coroutine::Coroutine(CoInterface &&co_inf)
 {
     int stack_size = (1 << 25);                         
     this->stack_base_ptr_ = new uint8_t[stack_size + 0x10];  //预留 0x10 字节的空间
-    this->stack_base_ptr_ += 0x8;
-    this->stack_ = this->stack_base_ptr_ + stack_size;   //栈是从上往下增长的，因此栈基址要指向最大处
+    this->stack_ = this->stack_base_ptr_ + stack_size - 0x8;   //栈是从上往下增长的，因此栈基址要指向最大处
 
     memset(&self_ctx_, 0, sizeof(self_ctx_));
 
-#ifdef __i386__ || _M_X86
+#ifdef /*__i386__ ||*/ _M_X86
     self_ctx_.esp = reinterpret_cast<uintptr_t>(this->stack_);
     *((long*)self_ctx_.esp) = reinterpret_cast<uintptr_t>(this);
 
@@ -47,7 +46,6 @@ Coroutine::Coroutine(CoInterface &&co_inf)
 
 Coroutine::~Coroutine()
 {
-    stack_base_ptr_ -= 0x8;
     if (stack_base_ptr_ != NULL)
     {
         delete[] stack_base_ptr_;
