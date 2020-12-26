@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(xco CXX C ASM_MASM)
+project(xco CXX C)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
   file(GLOB_RECURSE SRC_FILES_ASM *.S)
