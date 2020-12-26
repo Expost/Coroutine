@@ -23,7 +23,6 @@ Coroutine::Coroutine(CoInterface &&co_inf)
 {
     int stack_size = (1 << 25);                         
     this->stack_base_ptr_ = new uint8_t[stack_size + 0x10];  //预留 0x10 字节的空间
-    this->stack_base_ptr_ += 0x8;
     this->stack_ = this->stack_base_ptr_ + stack_size;   //栈是从上往下增长的，因此栈基址要指向最大处
 
     memset(&self_ctx_, 0, sizeof(self_ctx_));
@@ -36,10 +35,16 @@ Coroutine::Coroutine(CoInterface &&co_inf)
     self_ctx_.eip = reinterpret_cast<uintptr_t>(wrapper);
 #elif _M_X64
     self_ctx_.rsp = reinterpret_cast<uintptr_t>(this->stack_);
+    self_ctx_.rsp -= 0x8;
+
     self_ctx_.rcx = reinterpret_cast<uintptr_t>(this);
     self_ctx_.rip = reinterpret_cast<uintptr_t>(wrapper);
 #elif __x86_64__
     self_ctx_.rsp = reinterpret_cast<uintptr_t>(this->stack_);
+     // 这里的目的是64位下，调用函数时的栈是16字节对齐的，这里默认就是16字节对齐的，但当进到一个函数中时，由于压入了返回值
+     // 所以函数内是8字节对齐的，所以这里也要改为8字节对齐
+    self_ctx_.rsp -= 0x8;      
+
     self_ctx_.rdi = reinterpret_cast<uintptr_t>(this);
     self_ctx_.rip = reinterpret_cast<uintptr_t>(wrapper);
 #endif
@@ -47,7 +52,6 @@ Coroutine::Coroutine(CoInterface &&co_inf)
 
 Coroutine::~Coroutine()
 {
-    stack_base_ptr_ -= 0x8;
     if (stack_base_ptr_ != NULL)
     {
         delete[] stack_base_ptr_;
