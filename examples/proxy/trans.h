@@ -12,6 +12,7 @@
 #include <functional>
 #include "xco.h"
 
+
 class Trans
 {
 public:
@@ -34,11 +35,29 @@ public:
         ev.data.ptr = trans;
         ev.events = oper;
 
-        epoll_ctl(epfd_, EPOLL_CTL_ADD, socks, &ev);
+        return epoll_ctl(epfd_, EPOLL_CTL_ADD, socks, &ev);
+    }
+
+    int modify_mod(int socks, void *trans, int oper)
+    {
+        epoll_event ev;
+        ev.data.ptr = trans;
+        ev.events = oper;
+        return epoll_ctl(epfd_, EPOLL_CTL_MOD, socks, &ev);
+    }
+
+    int del_trans(int socks, int oper)
+    {
+        epoll_event ev;
+        ev.data.ptr = this;
+        ev.events = oper;
+
+        return epoll_ctl(epfd_, EPOLL_CTL_DEL, socks, &ev);
     }
 
     int co_read(int socks, uint8_t *buf, size_t read_count, bool over = false)
     {
+        
         int readed = 0;
         int last_read = read_count;
         int n = 0;
@@ -54,20 +73,19 @@ public:
             }
             else if (n < 0)
             {
-                // 暂不处理
                 if (n == -1 && errno == EAGAIN)
                 {
-                    epoll_event ev;
-                    ev.data.ptr = this;
-                    ev.events = EPOLLIN; // 这里继续读
-                    epoll_ctl(epfd_, EPOLL_CTL_MOD, socks, &ev);
-                    printf("[%p] before continue 1\n", this);
+                    // test[this] += 1;
+                    // if(test[this] > 10)
+                    // {
+                    //     exit(-1);
+                    // }
+                    modify_mod(socks, this, EPOLLIN);
+                    printf("[%p] read error n is %d, %d:%d\n", this, socks, n, errno);
                     co_ptr_->yield(0); // 退出
-                    printf("[%p] after continue 1\n", this);
                     continue;
                 }
-
-                printf("error n is %d\n", n);
+            
                 break;
             }
             else
@@ -84,11 +102,7 @@ public:
 
             if (readed < read_count)
             {
-                epoll_event ev;
-                ev.data.ptr = this;
-
-                ev.events = EPOLLIN; // 这里继续读
-                epoll_ctl(epfd_, EPOLL_CTL_MOD, socks, &ev);
+                 modify_mod(socks, this, EPOLLIN);
                 co_ptr_->yield(0); // 退出
                 continue;
             }
@@ -101,8 +115,9 @@ public:
         return n;
     }
 
-    int co_send(int socks, uint8_t *buf, size_t write_count)
+    int co_send(int socks, void *trans, uint8_t *buf, size_t write_count)
     {
+        test[this] = 0;
         int writed = 0;
         int last_write = write_count;
         int n = 0;
@@ -118,19 +133,15 @@ public:
             }
             if (n < 0)
             {
+                //EAGAIN;
                 if (n == -1 && errno == EAGAIN)
                 {
-                    printf("write continue 1\n");
-                    epoll_event ev;
-                    ev.data.ptr = this;
-                    ev.events = EPOLLOUT; // 这里继续读
-                    epoll_ctl(epfd_, EPOLL_CTL_MOD, socks, &ev);
+                    modify_mod(socks, trans, EPOLLOUT);
+                    printf("[%p] write n is %d:%d\n", this, n, errno);
                     co_ptr_->yield(0); // 退出
-
                     continue;
                 }
 
-                printf("write n is %d\n", n);
                 break;
             }
             else
@@ -141,18 +152,15 @@ public:
 
             if (writed < write_count)
             {
-                printf("again write %d\n", write_count - writed);
-                epoll_event ev;
-                ev.data.ptr = this;
-                ev.events = EPOLLOUT; // 这里继续读
-                epoll_ctl(epfd_, EPOLL_CTL_MOD, socks, &ev);
+                printf("little %d:%d\n", writed, write_count);
+                modify_mod(socks, trans, EPOLLOUT);
                 co_ptr_->yield(0); // 退出
-
                 continue;
             }
             else
             {
                 //printf("real write %d\n", writed);
+                
                 return writed;
             }
         };

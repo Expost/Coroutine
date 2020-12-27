@@ -9,9 +9,10 @@ void setnonblocking(int sock);
 class Remote : public Trans
 {
 public:
-    Remote(int epfd, int sock, int local_sock) : Trans(epfd),
-                                                 remote_sock_(sock),
-                                                 local_sock_(local_sock)
+    Remote(int epfd, int sock, int local_sock, void *local_trans) : Trans(epfd),
+                                                                    remote_sock_(sock),
+                                                                    local_sock_(local_sock),
+                                                                    local_trans_(local_trans)
     {
     }
 
@@ -23,23 +24,27 @@ public:
         int n = 0;
         uint8_t buf[4096] = {0};
         int count = 0;
+        int sum = 0;
         while ((n = co_read(remote_sock_, buf, sizeof(buf), true)) > 0)
         {
             // printf("remote read %p %d and send_ptr %p, %c, %d\n", &buf, n, local_trans_, buf[0], count);
-            // printf("remote read %d, %c\n", count, buf[0]);
-            n = co_send(local_sock_, buf, n);
-            // printf("local write %d\n", n);
+            printf("[%d] remote read %d, %d, %u, %c\n", remote_sock_, count, n, sum, buf[0]);
+            n = co_send(local_sock_, local_trans_, buf, n);
+            printf("[%p] local write %d\n", this, n);
+            sum += n;
             count += 1;
         }
 
+        del_trans(remote_sock_, EPOLLIN);
         close(remote_sock_);
         close(local_sock_);
-        printf("Remote and close close\n");
+        printf("remote close socks\n");
     }
 
 private:
     int remote_sock_;
     int local_sock_;
+    void *local_trans_;
 };
 
 class Client : public Trans
@@ -74,7 +79,7 @@ public:
 
         buf[0] = 5;
         buf[1] = 0;
-        n = co_send(client_socks_, buf, 2);
+        n = co_send(client_socks_, this, buf, 2);
         if (n <= 0)
         {
             printf("send error n is %d\n", n);
@@ -104,6 +109,11 @@ public:
             memcpy(name, &buf[5], n - 7);
             printf("domain name is %s\n", name);
             struct hostent *ht = gethostbyname(name);
+            if (!ht)
+            {
+                return;
+            }
+
             memcpy(&ip, &ht->h_addr_list[0], sizeof(ip));
 
             const char *ptr = inet_ntop(ht->h_addrtype, ht->h_addr_list[0], tmp_ip, sizeof(tmp_ip));
@@ -120,7 +130,7 @@ public:
 
         printf("port is %u\n", port);
         uint8_t send_buf[] = {0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        co_send(client_socks_, send_buf, sizeof(send_buf));
+        co_send(client_socks_, this, send_buf, sizeof(send_buf));
 
         int remote_sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -131,21 +141,30 @@ public:
 
         if (connect(remote_sock, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
         {
+            if (errno == EINPROGRESS)
+            {
+                //add_trans(remote_sock, remote_trans_, EPOLL)
+            }
             printf("connect %s:%lu failed\n", tmp_ip, port);
             return;
         }
 
         setnonblocking(remote_sock);
-        remote_trans_ = new Remote(epfd_, remote_sock, client_socks_);
-        add_trans(remote_sock, remote_trans_, EPOLLIN);
+        remote_trans_ = new Remote(epfd_, remote_sock, client_socks_, this);
 
+        add_trans(remote_sock, remote_trans_, EPOLLIN);
         printf("start read data\n");
         while ((n = co_read(client_socks_, buf, 4096, true)) > 0)
         {
-            // printf("read n is %d\n", n);
-            n = co_send(remote_sock, buf, n);
-            // printf("write n is %d\n", n);
+            printf("read n is %d\n", n);
+            n = co_send(remote_sock, remote_trans_, buf, n);
+            printf("write n is %d\n", n);
         }
+
+        del_trans(client_socks_, EPOLLIN);
+        close(client_socks_);
+        close(remote_sock);
+        printf("local close socks\n");
     }
 };
 

@@ -8,6 +8,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <signal.h>
+
+#include <map>
+
+std::map<void*, int> test;
 
 #include "client.h"
 
@@ -31,6 +36,12 @@ void setnonblocking(int sock)
 // curl --socks5 118.126.91.31:5000  https://www.baidu.com
 int main()
 {
+    //signal(SIGPIPE, SIG_IGN);
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, SIGPIPE);
+    sigprocmask(SIG_BLOCK, &set, NULL);
+
     int epfd = epoll_create(256);
     sockaddr_in clientaddr;
     sockaddr_in serveraddr;
@@ -75,21 +86,27 @@ int main()
 
                 setnonblocking(connfd);
                 char *str = inet_ntoa(clientaddr.sin_addr);
-                printf("accept a connnect from %s\n", str);
                 Trans *tmp_co = new Client(epfd, connfd);
                 ev.data.ptr = tmp_co;
                 ev.events = EPOLLIN;
-
+                printf("accept a connnect from %s, %p\n", str, tmp_co);
                 epoll_ctl(epfd, EPOLL_CTL_ADD, connfd, &ev);
             }
             else if (events[i].events & EPOLLIN)
             {
                 Trans *trans = (Trans *)events[i].data.ptr;
+                test[trans] = 0;
                 trans->resume(0);
             }
             else if (events[i].events & EPOLLOUT)
             {
                 Trans *trans = (Trans *)events[i].data.ptr;
+                printf("[%p] out\n", trans);
+                if(test[trans] > 10)
+                {
+                    exit(-1);
+                }
+                test[trans] += 1;
                 trans->resume(0);
             }
         }
