@@ -15,9 +15,8 @@
 class Trans
 {
 public:
-    Trans(int epfd, int sock) : epfd_(epfd),
-                                client_sock_(sock),
-                                co_(std::bind(&Trans::warp, this, std::placeholders::_1))
+    Trans(int epfd) : epfd_(epfd),
+                      co_(std::bind(&Trans::warp, this, std::placeholders::_1))
     {
     }
 
@@ -29,14 +28,23 @@ public:
         co_.resume(value);
     }
 
-    int co_read(uint8_t *buf, size_t read_count, bool over = false)
+    int add_trans(int socks, Trans *trans, int oper)
+    {
+        epoll_event ev;
+        ev.data.ptr = trans;
+        ev.events = oper;
+
+        epoll_ctl(epfd_, EPOLL_CTL_ADD, socks, &ev);
+    }
+
+    int co_read(int socks, uint8_t *buf, size_t read_count, bool over = false)
     {
         int readed = 0;
         int last_read = read_count;
         int n = 0;
         while (true)
         {
-            n = read(client_sock_, &buf[readed], last_read);
+            n = read(socks, &buf[readed], last_read);
 
             if (n == 0)
             {
@@ -47,14 +55,15 @@ public:
             else if (n < 0)
             {
                 // 暂不处理
-                if (n == 1 && errno == EAGAIN)
+                if (n == -1 && errno == EAGAIN)
                 {
                     epoll_event ev;
                     ev.data.ptr = this;
                     ev.events = EPOLLIN; // 这里继续读
-                    epoll_ctl(epfd_, EPOLL_CTL_MOD, client_sock_, &ev);
+                    epoll_ctl(epfd_, EPOLL_CTL_MOD, socks, &ev);
+                    printf("[%p] before continue 1\n", this);
                     co_ptr_->yield(0); // 退出
-                    printf("continue 1\n");
+                    printf("[%p] after continue 1\n", this);
                     continue;
                 }
 
@@ -67,8 +76,9 @@ public:
                 last_read -= n;
             }
 
-            if(over)
+            if (over)
             {
+                printf("[%p] read count %d, last_read %d\n", this, readed, last_read);
                 return readed;
             }
 
@@ -76,9 +86,9 @@ public:
             {
                 epoll_event ev;
                 ev.data.ptr = this;
-                
+
                 ev.events = EPOLLIN; // 这里继续读
-                epoll_ctl(epfd_, EPOLL_CTL_MOD, client_sock_, &ev);
+                epoll_ctl(epfd_, EPOLL_CTL_MOD, socks, &ev);
                 co_ptr_->yield(0); // 退出
                 continue;
             }
@@ -91,31 +101,36 @@ public:
         return n;
     }
 
-    int co_send(uint8_t *buf, size_t write_count)
+    int co_send(int socks, uint8_t *buf, size_t write_count)
     {
         int writed = 0;
         int last_write = write_count;
         int n = 0;
         while (1)
         {
-            int n = write(client_sock_, buf, write_count);
+            printf("[%p] buf:%p, write_count:%u\n", this, buf, write_count);
+            int n = write(socks, buf, write_count);
             if (n == 0)
             {
                 // 链接关闭了，返回由上层处理
+                printf("write n is zero\n");
                 break;
             }
             if (n < 0)
             {
                 if (n == -1 && errno == EAGAIN)
                 {
+                    printf("write continue 1\n");
                     epoll_event ev;
                     ev.data.ptr = this;
                     ev.events = EPOLLOUT; // 这里继续读
-                    epoll_ctl(epfd_, EPOLL_CTL_MOD, client_sock_, &ev);
+                    epoll_ctl(epfd_, EPOLL_CTL_MOD, socks, &ev);
                     co_ptr_->yield(0); // 退出
+
                     continue;
                 }
 
+                printf("write n is %d\n", n);
                 break;
             }
             else
@@ -126,15 +141,18 @@ public:
 
             if (writed < write_count)
             {
+                printf("again write %d\n", write_count - writed);
                 epoll_event ev;
                 ev.data.ptr = this;
                 ev.events = EPOLLOUT; // 这里继续读
-                epoll_ctl(epfd_, EPOLL_CTL_MOD, client_sock_, &ev);
+                epoll_ctl(epfd_, EPOLL_CTL_MOD, socks, &ev);
                 co_ptr_->yield(0); // 退出
+
                 continue;
             }
             else
             {
+                //printf("real write %d\n", writed);
                 return writed;
             }
         };
@@ -150,10 +168,9 @@ public:
 
     virtual void run() = 0;
 
-public:
+protected:
     Coroutine co_;
     Coroutine *co_ptr_;
-    int client_sock_;
     int epfd_;
 };
 

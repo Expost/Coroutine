@@ -28,6 +28,7 @@ void setnonblocking(int sock)
     }
 }
 
+// curl --socks5 118.126.91.31:5000  https://www.baidu.com
 int main()
 {
     int epfd = epoll_create(256);
@@ -72,6 +73,7 @@ int main()
                     exit(1);
                 }
 
+                setnonblocking(connfd);
                 char *str = inet_ntoa(clientaddr.sin_addr);
                 printf("accept a connnect from %s\n", str);
                 Trans *tmp_co = new Client(epfd, connfd);
