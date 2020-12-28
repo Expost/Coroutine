@@ -71,7 +71,7 @@ public:
             if (n == 0)
             {
                 // 关闭了连接，这里不处理
-                print("n is zeor\n");
+                printf("n is zeor\n");
                 break;
             }
             else if (n < 0)
@@ -84,7 +84,7 @@ public:
                     //     exit(-1);
                     // }
                     modify_mod(socks, this, EPOLLIN);
-                    print("[%p] read error n is %d, %d:%d\n", this, socks, n, errno);
+                    printf("[%p] read error n is %d, %d:%d\n", this, socks, n, errno);
                     co_ptr_->yield(0); // 退出
                     continue;
                 }
@@ -99,7 +99,7 @@ public:
 
             if (over)
             {
-                print("[%p] read count %d, last_read %d\n", this, readed, last_read);
+                //printf("[%p] read count %d, last_read %d\n", this, readed, last_read);
                 return readed;
             }
 
@@ -127,12 +127,12 @@ public:
         int n = 0;
         while (1)
         {
-            print("[%p] buf:%p, write_count:%u\n", this, buf, write_count);
+            //printf("[%p] buf:%p, write_count:%u\n", this, buf, write_count);
             int n = write(socks, buf, write_count);
             if (n == 0)
             {
                 // 链接关闭了，返回由上层处理
-                print("write n is zero\n");
+                printf("write n is zero\n");
                 break;
             }
             if (n < 0)
@@ -140,9 +140,10 @@ public:
                 //EAGAIN;
                 if (n == -1 && errno == EAGAIN)
                 {
-                    modify_mod(socks, this, EPOLLOUT);
-                    print("[%p] write n is %d:%d\n", this, n, errno);
-                    co_ptr_->yield(0); // 退出
+                    // modify_mod(socks, this, EPOLLOUT);
+                    // printf("[%p] write n is %d:%d\n", this, n, errno);
+                    // co_ptr_->yield(0); // 退出
+                    printf("[%p] write n is %d:%d\n", this, n, errno);
                     continue;
                 }
 
@@ -156,14 +157,14 @@ public:
 
             if (writed < write_count)
             {
-                print("little %d:%d\n", writed, write_count);
-                modify_mod(socks, this, EPOLLOUT);
-                co_ptr_->yield(0); // 退出
+                printf("little %d:%d\n", writed, write_count);
+                // modify_mod(socks, this, EPOLLOUT);
+                // co_ptr_->yield(0); // 退出
                 continue;
             }
             else
             {
-                //print("real write %d\n", writed);
+                //printf("real write %d\n", writed);
                 
                 return writed;
             }

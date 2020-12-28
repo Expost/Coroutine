@@ -77,6 +77,7 @@ int main()
             if (events[i].data.fd == listenfd)
             {
                 socklen_t client_len = 0;
+                memset(&clientaddr, 0, sizeof(clientaddr));
                 int connfd = accept(listenfd, (sockaddr *)&clientaddr, &client_len);
                 if (connfd < 0)
                 {
