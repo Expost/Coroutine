@@ -12,7 +12,7 @@
 
 #include <map>
 
-std::map<void*, int> test;
+//std::map<void*, int> test;
 
 #include "client.h"
 
@@ -95,20 +95,32 @@ int main()
             else if (events[i].events & EPOLLIN)
             {
                 Trans *trans = (Trans *)events[i].data.ptr;
-                test[trans] = 0;
-                trans->resume(0);
+                //test[trans] = 0;
+                trans->resume(EPOLLIN);
             }
             else if (events[i].events & EPOLLOUT)
             {
                 Trans *trans = (Trans *)events[i].data.ptr;
                 printf("[%p] out\n", trans);
-                if(test[trans] > 10)
-                {
-                    exit(-1);
-                }
-                test[trans] += 1;
-                trans->resume(0);
+                // if(test[trans] > 10)
+                // {
+                //     exit(-1);
+                // }
+                //test[trans] += 1;
+                trans->resume(EPOLLOUT);
             }
+            else if(events[i].events & EPOLLERR)
+            {
+                Trans *trans = (Trans *)events[i].data.ptr;
+                printf("EPOLLERR with trans %p", trans);
+                trans->resume(EPOLLERR);
+            }
+            else
+            {
+                Trans *trans = (Trans *)events[i].data.ptr;
+                printf("unknown event %d with trans %p\n", events[i].events, trans);
+            }
+            
         }
     }
 

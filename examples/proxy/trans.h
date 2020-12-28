@@ -12,7 +12,10 @@
 #include <functional>
 #include "xco.h"
 
+void print(...)
+{
 
+}
 class Trans
 {
 public:
@@ -68,7 +71,7 @@ public:
             if (n == 0)
             {
                 // 关闭了连接，这里不处理
-                printf("n is zeor\n");
+                print("n is zeor\n");
                 break;
             }
             else if (n < 0)
@@ -81,7 +84,7 @@ public:
                     //     exit(-1);
                     // }
                     modify_mod(socks, this, EPOLLIN);
-                    printf("[%p] read error n is %d, %d:%d\n", this, socks, n, errno);
+                    print("[%p] read error n is %d, %d:%d\n", this, socks, n, errno);
                     co_ptr_->yield(0); // 退出
                     continue;
                 }
@@ -96,7 +99,7 @@ public:
 
             if (over)
             {
-                printf("[%p] read count %d, last_read %d\n", this, readed, last_read);
+                print("[%p] read count %d, last_read %d\n", this, readed, last_read);
                 return readed;
             }
 
@@ -117,18 +120,18 @@ public:
 
     int co_send(int socks, void *trans, uint8_t *buf, size_t write_count)
     {
-        test[this] = 0;
+        //test[this] = 0;
         int writed = 0;
         int last_write = write_count;
         int n = 0;
         while (1)
         {
-            printf("[%p] buf:%p, write_count:%u\n", this, buf, write_count);
+            print("[%p] buf:%p, write_count:%u\n", this, buf, write_count);
             int n = write(socks, buf, write_count);
             if (n == 0)
             {
                 // 链接关闭了，返回由上层处理
-                printf("write n is zero\n");
+                print("write n is zero\n");
                 break;
             }
             if (n < 0)
@@ -137,7 +140,7 @@ public:
                 if (n == -1 && errno == EAGAIN)
                 {
                     modify_mod(socks, trans, EPOLLOUT);
-                    printf("[%p] write n is %d:%d\n", this, n, errno);
+                    print("[%p] write n is %d:%d\n", this, n, errno);
                     co_ptr_->yield(0); // 退出
                     continue;
                 }
@@ -152,14 +155,14 @@ public:
 
             if (writed < write_count)
             {
-                printf("little %d:%d\n", writed, write_count);
+                print("little %d:%d\n", writed, write_count);
                 modify_mod(socks, trans, EPOLLOUT);
                 co_ptr_->yield(0); // 退出
                 continue;
             }
             else
             {
-                //printf("real write %d\n", writed);
+                //print("real write %d\n", writed);
                 
                 return writed;
             }
