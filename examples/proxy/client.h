@@ -31,7 +31,7 @@ public:
         {
             // print("remote read %p %d and send_ptr %p, %c, %d\n", &buf, n, local_trans_, buf[0], count);
             print("[%d] remote read %d, %d, %u, %c\n", remote_sock_, count, n, sum, buf[0]);
-            n = co_send(local_sock_, local_trans_, buf, n);
+            n = co_send(local_sock_, buf, n);
             print("[%p] local write %d\n", this, n);
             sum += n;
             count += 1;
@@ -81,7 +81,7 @@ public:
 
         buf[0] = 5;
         buf[1] = 0;
-        n = co_send(client_socks_, this, buf, 2);
+        n = co_send(client_socks_, buf, 2);
         if (n <= 0)
         {
             print("send error n is %d\n", n);
@@ -132,7 +132,7 @@ public:
 
         print("port is %u\n", port);
         uint8_t send_buf[] = {0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        co_send(client_socks_, this, send_buf, sizeof(send_buf));
+        co_send(client_socks_, send_buf, sizeof(send_buf));
 
         int remote_sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -182,7 +182,7 @@ public:
         while ((n = co_read(client_socks_, buf, 4096, true)) > 0)
         {
             print("read n is %d\n", n);
-            n = co_send(remote_sock, remote_trans_, buf, n);
+            n = co_send(remote_sock, buf, n);
             print("write n is %d\n", n);
         }
 

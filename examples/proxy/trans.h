@@ -118,7 +118,8 @@ public:
         return n;
     }
 
-    int co_send(int socks, void *trans, uint8_t *buf, size_t write_count)
+    int co_send(int socks, uint8_t *buf, size_t write_count)
+    //int co_send(int socks, void *trans, uint8_t *buf, size_t write_count)
     {
         //test[this] = 0;
         int writed = 0;
@@ -139,7 +140,7 @@ public:
                 //EAGAIN;
                 if (n == -1 && errno == EAGAIN)
                 {
-                    modify_mod(socks, trans, EPOLLOUT);
+                    modify_mod(socks, this, EPOLLOUT);
                     print("[%p] write n is %d:%d\n", this, n, errno);
                     co_ptr_->yield(0); // 退出
                     continue;
@@ -156,7 +157,7 @@ public:
             if (writed < write_count)
             {
                 print("little %d:%d\n", writed, write_count);
-                modify_mod(socks, trans, EPOLLOUT);
+                modify_mod(socks, this, EPOLLOUT);
                 co_ptr_->yield(0); // 退出
                 continue;
             }
