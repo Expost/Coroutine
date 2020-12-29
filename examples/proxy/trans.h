@@ -15,6 +15,14 @@
 void print(...)
 {
 }
+
+class Trans;
+struct CallBack
+{
+    Trans* in = nullptr;
+    Trans* out = nullptr;
+};
+
 class Trans
 {
 public:
@@ -59,8 +67,10 @@ public:
 
     int co_read(int socks, uint8_t *buf, size_t read_count, bool over = false)
     {
-        modify_mod(socks, this, EPOLLIN);
+        printf("[%p] %d start\n", this, socks);
+        //modify_mod(socks, this, EPOLLIN);
         co_ptr_->yield(0); // 退出
+        printf("[%p] %d end\n", this, socks);
 
         int n = read(socks, buf, read_count);
         return n;
@@ -69,7 +79,7 @@ public:
     int co_send(int socks, uint8_t *buf, size_t write_count)
     //int co_send(int socks, void *trans, uint8_t *buf, size_t write_count)
     {
-        modify_mod(socks, this, EPOLLOUT);
+        //modify_mod(socks, this, EPOLLOUT);
         
         co_ptr_->yield(0); // 退出
         int n = write(socks, buf, write_count);

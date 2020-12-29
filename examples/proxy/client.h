@@ -37,7 +37,7 @@ public:
             count += 1;
         }
 
-        del_trans(remote_sock_, EPOLLIN);
+        del_trans(remote_sock_, EPOLLIN | EPOLLOUT);
         close(remote_sock_);
         close(local_sock_);
         printf("remote close socks\n");
@@ -141,52 +141,75 @@ public:
         servaddr.sin_family = AF_INET;
         servaddr.sin_addr.s_addr = inet_addr(tmp_ip); //此处更改epoll服务器地址
 
+        // setnonblocking(remote_sock);
+        // if (connect(remote_sock, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+        // {
+        //     if (errno == EINPROGRESS)
+        //     {
+        //         printf("connect EINPROGRESS\n");
+        //         del_trans(client_socks_, EPOLLOUT | EPOLLIN);
+        //         add_trans(remote_sock, this, EPOLLOUT | EPOLLIN);
+        //         int event = co_ptr_->yield(0);
+
+        //         if (event == EPOLLERR)
+        //         {
+        //             printf("connect failed\n");
+        //             return;
+        //         }
+        //         else if (event == EPOLLOUT)
+        //         {
+        //             printf("connect successful\n");
+        //         }
+        //         else
+        //         {
+        //             printf("event is %d\n", event);
+        //         }
+
+        //         del_trans(remote_sock, EPOLLOUT);
+        //         remote_trans_ = new Remote(epfd_, remote_sock, client_socks_, this);
+        //         add_trans(remote_sock, remote_trans_, EPOLLIN);
+        //         add_trans(client_socks_, this, EPOLLIN);
+        //     }
+        //     else
+        //     {
+        //         printf("connect %s:%lu failed\n", tmp_ip, port);
+        //         return;
+        //     }
+        // }
+
+        connect(remote_sock, (struct sockaddr *)&servaddr, sizeof(servaddr));
         setnonblocking(remote_sock);
 
-        if (connect(remote_sock, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
-        {
-            if (errno == EINPROGRESS)
-            {
-                printf("connect EINPROGRESS\n");
-                del_trans(client_socks_, EPOLLOUT | EPOLLIN);
-                add_trans(remote_sock, this, EPOLLOUT | EPOLLIN);
-                int event = co_ptr_->yield(0);
+        remote_trans_ = new Remote(epfd_, remote_sock, client_socks_, this);
 
-                if (event == EPOLLERR)
-                {
-                    printf("connect failed\n");
-                    return;
-                }
-                else if (event == EPOLLOUT)
-                {
-                    printf("connect successful\n");
-                }
-                else
-                {
-                    printf("event is %d\n", event);
-                }
+        CallBack *cb = new CallBack;
+        cb->in = remote_trans_;
+        cb->out = this;
+        epoll_event ev;
+        ev.data.ptr = cb;
+        ev.events = EPOLLIN | EPOLLOUT;
+        epoll_ctl(epfd_, EPOLL_CTL_ADD, remote_sock, &ev);
+        remote_trans_->resume(0);
 
-                del_trans(remote_sock, EPOLLOUT);
-                remote_trans_ = new Remote(epfd_, remote_sock, client_socks_, this);
-                add_trans(remote_sock, remote_trans_, EPOLLIN);
-                add_trans(client_socks_, this, EPOLLIN);
-            }
-            else
-            {
-                printf("connect %s:%lu failed\n", tmp_ip, port);
-                return;
-            }
-        }
+
+        cb = new CallBack;
+        cb->in = this;
+        cb->out = remote_trans_;
+        ev.data.ptr = cb;
+        ev.events = EPOLLIN | EPOLLOUT;
+        epoll_ctl(epfd_, EPOLL_CTL_MOD, client_socks_, &ev);
+
 
         printf("start read data\n");
         while ((n = co_read(client_socks_, buf, 4096, true)) > 0)
         {
+            printf("read n is %d\n", n);
             //printf("read n is %d\n", n);
             n = co_send(remote_sock, buf, n);
             //printf("write n is %d\n", n);
         }
 
-        del_trans(client_socks_, EPOLLIN);
+        del_trans(client_socks_, EPOLLIN | EPOLLOUT);
         close(client_socks_);
         close(remote_sock);
         printf("local close socks\n");

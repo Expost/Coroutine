@@ -89,7 +89,7 @@ private:
     CoroutineState state_;
     uint8_t *stack_base_ptr_;
     uint8_t *stack_;
-    CoroutineCtx *original_ctx_;
+    CoroutineCtx original_ctx_;
     CoroutineCtx self_ctx_;
     CoInterface co_inf_;
 };

@@ -33,6 +33,7 @@ void setnonblocking(int sock)
     }
 }
 
+
 // curl --socks5 118.126.91.31:5000  https://www.baidu.com
 int main()
 {
@@ -88,40 +89,55 @@ int main()
                 setnonblocking(connfd);
                 char *str = inet_ntoa(clientaddr.sin_addr);
                 Trans *tmp_co = new Client(epfd, connfd);
-                ev.data.ptr = tmp_co;
+                CallBack *cb = new CallBack;
+                cb->in = tmp_co;
+                cb->out = tmp_co;
+                ev.data.ptr = cb;
                 ev.events = EPOLLIN;
                 printf("accept a connnect from %s, %p\n", str, tmp_co);
                 epoll_ctl(epfd, EPOLL_CTL_ADD, connfd, &ev);
+
+                tmp_co->resume(0);
             }
             else if (events[i].events & EPOLLIN)
             {
-                Trans *trans = (Trans *)events[i].data.ptr;
-                //test[trans] = 0;
-                trans->resume(EPOLLIN);
+                // Trans *trans = (Trans *)events[i].data.ptr;
+                // //test[trans] = 0;
+                // trans->resume(EPOLLIN);
+                CallBack *cb = (CallBack *)events[i].data.ptr;
+                if(cb->in)
+                {
+                    cb->in->resume(0);
+                }
             }
             else if (events[i].events & EPOLLOUT)
             {
-                Trans *trans = (Trans *)events[i].data.ptr;
-                printf("[%p] out\n", trans);
+                CallBack *cb = (CallBack *)events[i].data.ptr;
+                if(cb->out)
+                {
+                    cb->out->resume(0);
+                }
+                //printf("[%p] out\n", trans);
                 // if(test[trans] > 10)
                 // {
                 //     exit(-1);
                 // }
                 //test[trans] += 1;
-                trans->resume(EPOLLOUT);
+                //trans->resume(EPOLLOUT);
             }
             else if(events[i].events & EPOLLERR)
             {
-                Trans *trans = (Trans *)events[i].data.ptr;
-                printf("EPOLLERR with trans %p", trans);
-                trans->resume(EPOLLERR);
+                printf("error\n");
+                // Trans *trans = (Trans *)events[i].data.ptr;
+                // printf("EPOLLERR with trans %p", trans);
+                // trans->resume(EPOLLERR);
             }
             else
             {
-                Trans *trans = (Trans *)events[i].data.ptr;
-                printf("unknown event %d with trans %p\n", events[i].events, trans);
+                printf("unknown event %d\n", events[i].events);
+                // Trans *trans = (Trans *)events[i].data.ptr;
+                // printf("unknown event %d with trans %p\n", events[i].events, trans);
             }
-            
         }
     }
 
