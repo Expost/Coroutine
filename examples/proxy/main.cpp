@@ -11,10 +11,10 @@
 #include <signal.h>
 
 #include <map>
-
-std::map<void*, int> test;
-
 #include "client.h"
+
+std::map<void *, int> test;
+std::map<int, Dispatch *> sock_dis;
 
 void setnonblocking(int sock)
 {
@@ -87,27 +87,66 @@ int main()
                 setnonblocking(connfd);
                 char *str = inet_ntoa(clientaddr.sin_addr);
                 Trans *tmp_co = new Client(epfd, connfd);
-                ev.data.ptr = tmp_co;
-                ev.events = EPOLLIN;
+                //ev.data.ptr = tmp_co;
+                //ev.events = EPOLLIN;
+                //epoll_ctl(epfd, EPOLL_CTL_ADD, connfd, &ev);
                 printf("accept a connnect from %s, %p\n", str, tmp_co);
-                epoll_ctl(epfd, EPOLL_CTL_ADD, connfd, &ev);
+                tmp_co->resume(0);
             }
-            else if (events[i].events & EPOLLIN)
+            else
             {
-                Trans *trans = (Trans *)events[i].data.ptr;
-                test[trans] = 0;
-                trans->resume(0);
-            }
-            else if (events[i].events & EPOLLOUT)
-            {
-                Trans *trans = (Trans *)events[i].data.ptr;
-                printf("[%p] out\n", trans);
-                if(test[trans] > 10)
+                Dispatch *dispatch = (Dispatch *)events[i].data.ptr;
+                if (events[i].events & EPOLLIN)
                 {
+                    if (dispatch == NULL || dispatch->on_in == NULL)
+                    {
+                        printf("on in is null\n");
+                        continue;
+                    }
+
+                    //printf("EPOLLIN 1\n");
+                    dispatch->on_in->resume(0);
+                    //printf("EPOLLIN 2\n");
+                }
+                else if (events[i].events & EPOLLOUT)
+                {
+                    if (dispatch == NULL || dispatch->on_out == NULL)
+                    {
+                        printf("on out is null\n");
+                        continue;
+                    }
+                    //printf("EPOLLOUT 1\n");
+                    dispatch->on_out->resume(0);
+                    //printf("EPOLLOUT 2\n");
+                }
+                else if(events[i].events & EPOLLHUP)
+                {
+                    printf("EPOLLHUP\n");
+                    del_trans(epfd, events[i].data.fd);
+                }
+                else
+                {
+                    printf("Other event %d\n", events[i].events);
                     exit(-1);
                 }
-                test[trans] += 1;
-                trans->resume(0);
+
+                // if (dispatch && dispatch->on_in && dispatch->on_in->is_end())
+                // {
+                //     delete dispatch->on_in;
+                //     dispatch->on_in = nullptr;
+                // }
+                // if (dispatch && dispatch->on_out && dispatch->on_out->is_end())
+                // {
+                //     del_trans(epfd, events[i].data.fd);
+                //     delete dispatch->on_out;
+                //     dispatch->on_out = nullptr;
+                // }
+
+                // if (dispatch && dispatch->on_in == nullptr && dispatch->on_out == nullptr)
+                // {
+                //     delete dispatch;
+                //     sock_dis[events[i].data.fd] = nullptr;
+                // }
             }
         }
     }

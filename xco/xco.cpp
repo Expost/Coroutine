@@ -11,11 +11,8 @@ extern "C" void switch_context(CoroutineCtx *from, CoroutineCtx *to);
 extern int switch_context(CoroutineCtx *from, CoroutineCtx *to) __asm__("switch_context");
 #endif
 
-thread_local CoroutineCtx thread_local_ctx = { 0 };
-
 Coroutine::Coroutine(CoInterface &&co_inf)
          : id_(0),
-           original_ctx_(NULL),
            state_(PRESTART),
            stack_base_ptr_(NULL),
            stack_(NULL),
@@ -86,16 +83,16 @@ uintptr_t Coroutine::resume(uintptr_t value)
 
     self_ctx_.swap_value = value;
     //do_switch(&thread_local_ctx, &self_ctx_);
-    switch_context(&thread_local_ctx, &self_ctx_);
+    switch_context(&original_ctx_, &self_ctx_);
     set_coroutine_state(get_coroutine_state() != FINISHED ? SUSPEND : FINISHED);
-    return thread_local_ctx.swap_value;
+    return original_ctx_.swap_value;
 }
 
 uintptr_t Coroutine::yield(uintptr_t value)
 {
-    thread_local_ctx.swap_value = value;
+    original_ctx_.swap_value = value;
     // do_switch(&self_ctx_, &thread_local_ctx);
-    switch_context(&self_ctx_, &thread_local_ctx);
+    switch_context(&self_ctx_, &original_ctx_);
     return self_ctx_.swap_value;
 }
 

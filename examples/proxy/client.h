@@ -14,6 +14,7 @@ public:
                                                                     local_sock_(local_sock),
                                                                     local_trans_(local_trans)
     {
+        add_trans(epfd, sock, this, EPOLLHUP);
     }
 
     ~Remote() = default;
@@ -25,20 +26,23 @@ public:
         uint8_t buf[4096] = {0};
         int count = 0;
         int sum = 0;
+        printf("remote start\n");
         while ((n = co_read(remote_sock_, buf, sizeof(buf), true)) > 0)
         {
             // printf("remote read %p %d and send_ptr %p, %c, %d\n", &buf, n, local_trans_, buf[0], count);
-            printf("[%d] remote read %d, %d, %u, %c\n", remote_sock_, count, n, sum, buf[0]);
+            //printf("[%d] remote read %d, %d, %u, %c\n", remote_sock_, count, n, sum, buf[0]);
             n = co_send(local_sock_, local_trans_, buf, n);
-            printf("[%p] local write %d\n", this, n);
+            //printf("[%p] local write %d\n", this, n);
             sum += n;
             count += 1;
         }
 
-        del_trans(remote_sock_, EPOLLIN);
-        close(remote_sock_);
-        close(local_sock_);
-        printf("remote close socks\n");
+        // 如果远程sock读失败，那么就不管了，直接退出。
+        // local sock肯定会写失败，由local的协程去处理
+        // del_trans(remote_sock_, EPOLLIN);
+        // close(remote_sock_);
+        // close(local_sock_);
+        // printf("remote close socks\n");
     }
 
 private:
@@ -52,6 +56,7 @@ class Client : public Trans
 public:
     Client(int epfd, int sock) : Trans(epfd), client_socks_(sock)
     {
+        add_trans(epfd, sock, this, EPOLLHUP);
     }
 
     ~Client() = default;
@@ -151,19 +156,27 @@ public:
 
         setnonblocking(remote_sock);
         remote_trans_ = new Remote(epfd_, remote_sock, client_socks_, this);
-
-        add_trans(remote_sock, remote_trans_, EPOLLIN);
+        remote_trans_->resume(0);
+        
         printf("start read data\n");
         while ((n = co_read(client_socks_, buf, 4096, true)) > 0)
         {
-            printf("read n is %d\n", n);
+            //printf("client read n is %d\n", n);
             n = co_send(remote_sock, remote_trans_, buf, n);
-            printf("write n is %d\n", n);
+            if(n <= 0)
+            {
+                break;
+            }
+            //printf("client write n is %d\n", n);
         }
 
-        del_trans(client_socks_, EPOLLIN);
+        printf("socks %d, n is %d, and error is %d\n", client_socks_, n, errno);
+        
         close(client_socks_);
         close(remote_sock);
+        del_trans(epfd_, client_socks_);
+        del_trans(epfd_, remote_sock);
+
         printf("local close socks\n");
     }
 };
