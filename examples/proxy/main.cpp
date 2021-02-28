@@ -96,7 +96,15 @@ int main()
             else
             {
                 Dispatch *dispatch = (Dispatch *)events[i].data.ptr;
-                if (events[i].events & EPOLLIN)
+                if(events[i].events & EPOLLHUP)
+                {
+                    int error_sock = dispatch->socket;
+                    printf("socks %d EPOLLHUP\n", error_sock);
+                    del_trans(epfd, error_sock);
+                    close(error_sock);
+                    //exit(-1);
+                }
+                else if (events[i].events & EPOLLIN)
                 {
                     if (dispatch == NULL || dispatch->on_in == NULL)
                     {
@@ -118,11 +126,6 @@ int main()
                     //printf("EPOLLOUT 1\n");
                     dispatch->on_out->resume(0);
                     //printf("EPOLLOUT 2\n");
-                }
-                else if(events[i].events & EPOLLHUP)
-                {
-                    printf("EPOLLHUP\n");
-                    del_trans(epfd, events[i].data.fd);
                 }
                 else
                 {

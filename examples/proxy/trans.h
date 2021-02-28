@@ -20,6 +20,7 @@ struct Dispatch
     Trans *on_hup = nullptr;
 
     int oper = 0;
+    int socket = 0;
 };
 
 extern std::map<int, Dispatch *> sock_dis;
@@ -47,6 +48,7 @@ int add_trans(int epfd, int socks, Trans *trans, int oper)
     ev.data.ptr = sock_dis[socks];
     ev.events = oper;
     sock_dis[socks]->oper = oper;
+    sock_dis[socks]->socket = socks;
     mod((Dispatch *)ev.data.ptr, oper, trans);
     return epoll_ctl(epfd, EPOLL_CTL_ADD, socks, &ev);
 }

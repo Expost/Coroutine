@@ -144,26 +144,52 @@ public:
         servaddr.sin_family = AF_INET;
         servaddr.sin_addr.s_addr = inet_addr(tmp_ip); //此处更改epoll服务器地址
 
+        setnonblocking(remote_sock);
+
         if (connect(remote_sock, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
         {
             if (errno == EINPROGRESS)
             {
-                //add_trans(remote_sock, remote_trans_, EPOLL)
+                remote_trans_ = new Remote(epfd_, remote_sock, client_socks_, this);
+
+                modify_mod_add(remote_sock, this, EPOLLOUT);
+                co_ptr_->yield(0);
+                modify_mod_del(remote_sock, this, EPOLLOUT);
+                //del_trans(epfd_, remote_sock);
+
+                remote_trans_->resume(0);
             }
-            printf("connect %s:%lu failed\n", tmp_ip, port);
-            return;
+            else
+            {
+                printf("unknown error\n");
+                return;
+            }
+        }
+        else
+        {
+            remote_trans_ = new Remote(epfd_, remote_sock, client_socks_, this);
+            remote_trans_->resume(0);
+            printf("connect suc directly\n");
         }
 
-        setnonblocking(remote_sock);
-        remote_trans_ = new Remote(epfd_, remote_sock, client_socks_, this);
-        remote_trans_->resume(0);
-        
+        // if (connect(remote_sock, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+        // {
+        //     if (errno == EINPROGRESS)
+        //     {
+        //         //add_trans(remote_sock, remote_trans_, EPOLL)
+        //     }
+        //     printf("connect %s:%lu failed\n", tmp_ip, port);
+        //     return;
+        // }
+
+        // setnonblocking(remote_sock);
+
         printf("start read data\n");
         while ((n = co_read(client_socks_, buf, 4096, true)) > 0)
         {
             //printf("client read n is %d\n", n);
             n = co_send(remote_sock, remote_trans_, buf, n);
-            if(n <= 0)
+            if (n <= 0)
             {
                 break;
             }
@@ -171,7 +197,7 @@ public:
         }
 
         printf("socks %d, n is %d, and error is %d\n", client_socks_, n, errno);
-        
+
         close(client_socks_);
         close(remote_sock);
         del_trans(epfd_, client_socks_);
