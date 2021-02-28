@@ -10,38 +10,53 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <functional>
+#include <memory>
 #include "xco.h"
 
 class Trans;
 struct Dispatch
 {
-    Trans *on_in = nullptr;
-    Trans *on_out = nullptr;
-    Trans *on_hup = nullptr;
-
-    int oper = 0;
     int socket = 0;
+    int oper = 0;
+    std::shared_ptr<Trans> on_in = nullptr;
+    std::shared_ptr<Trans> on_out = nullptr;
+    std::shared_ptr<Trans> on_hup = nullptr;
+
+    ~Dispatch()
+    {
+        oper = 0;
+        socket = 0;
+        on_in = nullptr;
+        on_out = nullptr;
+        on_hup = nullptr;
+    }
 };
 
 extern std::map<int, Dispatch *> sock_dis;
 
-void mod(Dispatch *dispatch, int oper, Trans *trans)
+void mod(Dispatch *dispatch, int oper, std::shared_ptr<Trans> trans)
 {
+    if(dispatch == NULL)
+    {
+        printf("dispatch is null\n");
+        return ;
+    }
+
     if (oper & EPOLLIN)
     {
-        dispatch->on_in = (Trans *)trans;
+        dispatch->on_in = trans;
     }
     if (oper & EPOLLOUT)
     {
-        dispatch->on_out = (Trans *)trans;
+        dispatch->on_out = trans;
     }
-    if (oper & EPOLLHUP)
+    if(oper & EPOLLHUP)
     {
-        dispatch->on_hup = (Trans *)trans;
+        dispatch->on_hup = trans;
     }
 }
 
-int add_trans(int epfd, int socks, Trans *trans, int oper)
+int add_trans(int epfd, int socks, std::shared_ptr<Trans> trans, int oper)
 {
     epoll_event ev;
     sock_dis[socks] = new Dispatch();
@@ -59,9 +74,17 @@ int del_trans(int epfd, int socks)
     ev.data.ptr = nullptr;
     ev.events = 0;
 
+    auto itr = sock_dis.find(socks);
+    if(itr != sock_dis.end())
+    {
+        delete itr->second;
+        sock_dis.erase(itr);
+    }
+    
     return epoll_ctl(epfd, EPOLL_CTL_DEL, socks, &ev);
 }
-class Trans
+
+class Trans: public std::enable_shared_from_this<Trans>
 {
 public:
     Trans(int epfd) : epfd_(epfd),
@@ -69,7 +92,10 @@ public:
     {
     }
 
-    ~Trans() = default;
+    virtual ~Trans()
+    {
+        printf("~Trans\n");
+    }
 
 public:
     bool is_end()
@@ -82,28 +108,40 @@ public:
         co_.resume(value);
     }
 
-    int modify_mod_add(int socks, void *trans, int oper)
+    int modify_mod_add(int socks, int oper)
     {
+        auto dispatch = sock_dis[socks];
+        if(dispatch == nullptr)
+        {
+            printf("modify_mod_add dispatch is null\n");
+            return -1;
+        }
+
         epoll_event ev;
         //ev.data.ptr = trans;
-
-        ev.data.ptr = sock_dis[socks];
-        mod((Dispatch *)ev.data.ptr, oper, (Trans *)trans);
-        ev.events = sock_dis[socks]->oper | oper;
-        sock_dis[socks]->oper = ev.events;
+        ev.data.ptr = dispatch;
+        mod((Dispatch *)ev.data.ptr, oper, shared_from_this());
+        ev.events = dispatch->oper | oper;
+        dispatch->oper = ev.events;
         //printf("sock %d add %d and now oper is %d\n", socks, oper, ev.events);
         return epoll_ctl(epfd_, EPOLL_CTL_MOD, socks, &ev);
     }
 
-    int modify_mod_del(int socks, void *trans, int oper)
+    int modify_mod_del(int socks, int oper)
     {
-        epoll_event ev;
-        //ev.data.ptr = trans;
+        auto dispatch = sock_dis[socks];
+        if(dispatch == nullptr)
+        {
+            printf("modify_mod_del dispatch is null\n");
+            return -1;
+        }
 
-        ev.data.ptr = sock_dis[socks];
+        epoll_event ev;
+
+        ev.data.ptr = dispatch;
         //mod((Dispatch*)ev.data.ptr, oper, (Trans*)trans);
-        sock_dis[socks]->oper &= (~oper);
-        ev.events = sock_dis[socks]->oper;
+        dispatch->oper &= (~oper);
+        ev.events = dispatch->oper;
         //printf("sock %d del %d and new oper is %d\n", socks, oper, ev.events);
         return epoll_ctl(epfd_, EPOLL_CTL_MOD, socks, &ev);
     }
@@ -111,7 +149,7 @@ public:
     int co_read(int socks, uint8_t *buf, size_t read_count, bool over = false)
     {
         //printf("sock %d, read 1\n", socks);
-        modify_mod_add(socks, this, EPOLLIN);
+        modify_mod_add(socks, EPOLLIN);
         co_ptr_->yield(0);
         //printf("sock %d, read 2\n", socks);
         int n = 0;
@@ -128,67 +166,13 @@ public:
             break;
         }
 
-        modify_mod_del(socks, this, EPOLLIN);
+        modify_mod_del(socks, EPOLLIN);
         return n;
-        // int readed = 0;
-        // int last_read = read_count;
-        // int n = 0;
-        // while (true)
-        // {
-
-        //     if (n == 0)
-        //     {
-        //         // 关闭了连接，这里不处理
-        //         printf("n is zeor\n");
-        //         break;
-        //     }
-        //     else if (n < 0)
-        //     {
-        //         if (n == -1 && errno == EAGAIN)
-        //         {
-        //             // test[this] += 1;
-        //             // if(test[this] > 10)
-        //             // {
-        //             //     exit(-1);
-        //             // }
-
-        //             printf("[%p] read error n is %d, %d:%d\n", this, socks, n, errno);
-        //             co_ptr_->yield(0); // 退出
-        //             continue;
-        //         }
-
-        //         break;
-        //     }
-        //     else
-        //     {
-        //         readed += n;
-        //         last_read -= n;
-        //     }
-
-        //     if (over)
-        //     {
-        //         printf("[%p] read count %d, last_read %d\n", this, readed, last_read);
-        //         return readed;
-        //     }
-
-        //     if (readed < read_count)
-        //     {
-        //         modify_mod(socks, this, EPOLLIN);
-        //         co_ptr_->yield(0); // 退出
-        //         continue;
-        //     }
-        //     else
-        //     {
-        //         return readed;
-        //     }
-        // };
-
-        // return n;
     }
 
-    int co_send(int socks, void *trans, uint8_t *buf, size_t write_count)
+    int co_send(int socks, uint8_t *buf, size_t write_count)
     {
-        modify_mod_add(socks, this, EPOLLOUT);
+        modify_mod_add(socks, EPOLLOUT);
         co_ptr_->yield(0);
         int n = 0;
         while (true)
@@ -203,58 +187,8 @@ public:
             break;
         }
 
-        modify_mod_del(socks, this, EPOLLOUT);
+        modify_mod_del(socks, EPOLLOUT);
         return n;
-
-        // test[this] = 0;
-        // int writed = 0;
-        // int last_write = write_count;
-        // int n = 0;
-        // while (1)
-        // {
-        //     printf("[%p] buf:%p, write_count:%u\n", this, buf, write_count);
-        //     int n = write(socks, buf, write_count);
-        //     if (n == 0)
-        //     {
-        //         // 链接关闭了，返回由上层处理
-        //         printf("write n is zero\n");
-        //         break;
-        //     }
-        //     if (n < 0)
-        //     {
-        //         //EAGAIN;
-        //         if (n == -1 && errno == EAGAIN)
-        //         {
-        //             modify_mod(socks, trans, EPOLLOUT);
-        //             printf("[%p] write n is %d:%d\n", this, n, errno);
-        //             co_ptr_->yield(0); // 退出
-        //             continue;
-        //         }
-
-        //         break;
-        //     }
-        //     else
-        //     {
-        //         writed += n;
-        //         last_write -= n;
-        //     }
-
-        //     if (writed < write_count)
-        //     {
-        //         printf("little %d:%d\n", writed, write_count);
-        //         modify_mod(socks, trans, EPOLLOUT);
-        //         co_ptr_->yield(0); // 退出
-        //         continue;
-        //     }
-        //     else
-        //     {
-        //         //printf("real write %d\n", writed);
-
-        //         return writed;
-        //     }
-        // };
-
-        // return n;
     }
 
     void warp(Coroutine *this_)

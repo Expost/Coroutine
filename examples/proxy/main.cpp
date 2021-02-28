@@ -69,6 +69,7 @@ int main()
     char line[MAXLINE];
     int n = 0;
 
+    time_t last_time = time(NULL);
     while (true)
     {
         int nfds = epoll_wait(epfd, events, 20, 500);
@@ -86,17 +87,44 @@ int main()
 
                 setnonblocking(connfd);
                 char *str = inet_ntoa(clientaddr.sin_addr);
-                Trans *tmp_co = new Client(epfd, connfd);
+                auto tmp_co = std::make_shared<Client>(epfd, connfd);
+                add_trans(epfd, connfd, tmp_co, EPOLLHUP);
                 //ev.data.ptr = tmp_co;
                 //ev.events = EPOLLIN;
                 //epoll_ctl(epfd, EPOLL_CTL_ADD, connfd, &ev);
-                printf("accept a connnect from %s, %p\n", str, tmp_co);
+                printf("accept a connnect %d from %s, %p\n", connfd, str, tmp_co);
                 tmp_co->resume(0);
             }
             else
             {
                 Dispatch *dispatch = (Dispatch *)events[i].data.ptr;
-                if(events[i].events & EPOLLHUP)
+                if (dispatch == NULL)
+                {
+                    continue;
+                }
+
+                if (events[i].events & EPOLLIN)
+                {
+                    auto in_routine = dispatch->on_in;
+                    if (in_routine == NULL)
+                    {
+                        printf("on in is null\n");
+                        continue;
+                    }
+                    in_routine->resume(0);
+                }
+                else if (events[i].events & EPOLLOUT)
+                {
+                    auto out_routine = dispatch->on_out;
+                    if (out_routine == NULL)
+                    {
+                        printf("on out is null\n");
+                        continue;
+                    }
+
+                    out_routine->resume(0);
+                }
+                else if (events[i].events & EPOLLHUP)
                 {
                     int error_sock = dispatch->socket;
                     printf("socks %d EPOLLHUP\n", error_sock);
@@ -104,52 +132,22 @@ int main()
                     close(error_sock);
                     //exit(-1);
                 }
-                else if (events[i].events & EPOLLIN)
-                {
-                    if (dispatch == NULL || dispatch->on_in == NULL)
-                    {
-                        printf("on in is null\n");
-                        continue;
-                    }
-
-                    //printf("EPOLLIN 1\n");
-                    dispatch->on_in->resume(0);
-                    //printf("EPOLLIN 2\n");
-                }
-                else if (events[i].events & EPOLLOUT)
-                {
-                    if (dispatch == NULL || dispatch->on_out == NULL)
-                    {
-                        printf("on out is null\n");
-                        continue;
-                    }
-                    //printf("EPOLLOUT 1\n");
-                    dispatch->on_out->resume(0);
-                    //printf("EPOLLOUT 2\n");
-                }
                 else
                 {
                     printf("Other event %d\n", events[i].events);
                     exit(-1);
                 }
+            }
+        }
 
-                // if (dispatch && dispatch->on_in && dispatch->on_in->is_end())
-                // {
-                //     delete dispatch->on_in;
-                //     dispatch->on_in = nullptr;
-                // }
-                // if (dispatch && dispatch->on_out && dispatch->on_out->is_end())
-                // {
-                //     del_trans(epfd, events[i].data.fd);
-                //     delete dispatch->on_out;
-                //     dispatch->on_out = nullptr;
-                // }
-
-                // if (dispatch && dispatch->on_in == nullptr && dispatch->on_out == nullptr)
-                // {
-                //     delete dispatch;
-                //     sock_dis[events[i].data.fd] = nullptr;
-                // }
+        time_t now = time(NULL);
+        if (now - last_time >= 5)
+        {
+            last_time = now;
+            printf("inter\n");
+            for (auto &itr : sock_dis)
+            {
+                printf("sock:%d, ptr:%p\n", itr.first, itr.second);
             }
         }
     }

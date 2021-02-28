@@ -9,15 +9,17 @@ void setnonblocking(int sock);
 class Remote : public Trans
 {
 public:
-    Remote(int epfd, int sock, int local_sock, void *local_trans) : Trans(epfd),
-                                                                    remote_sock_(sock),
-                                                                    local_sock_(local_sock),
-                                                                    local_trans_(local_trans)
+    Remote(int epfd, int sock, int local_sock) : Trans(epfd),
+                                                 remote_sock_(sock),
+                                                 local_sock_(local_sock)
     {
-        add_trans(epfd, sock, this, EPOLLHUP);
+        //add_trans(epfd, sock, shared_from_this(), EPOLLHUP);
     }
 
-    ~Remote() = default;
+    ~Remote()
+    {
+        printf("~Remote\n");
+    }
 
 public:
     void run() override
@@ -31,7 +33,7 @@ public:
         {
             // printf("remote read %p %d and send_ptr %p, %c, %d\n", &buf, n, local_trans_, buf[0], count);
             //printf("[%d] remote read %d, %d, %u, %c\n", remote_sock_, count, n, sum, buf[0]);
-            n = co_send(local_sock_, local_trans_, buf, n);
+            n = co_send(local_sock_, buf, n);
             //printf("[%p] local write %d\n", this, n);
             sum += n;
             count += 1;
@@ -43,12 +45,14 @@ public:
         // close(remote_sock_);
         // close(local_sock_);
         // printf("remote close socks\n");
+
+        close(remote_sock_);
+        del_trans(epfd_, remote_sock_);
     }
 
 private:
     int remote_sock_;
     int local_sock_;
-    void *local_trans_;
 };
 
 class Client : public Trans
@@ -56,13 +60,15 @@ class Client : public Trans
 public:
     Client(int epfd, int sock) : Trans(epfd), client_socks_(sock)
     {
-        add_trans(epfd, sock, this, EPOLLHUP);
+        //add_trans(epfd, sock, shared_from_this(), EPOLLHUP);
     }
 
-    ~Client() = default;
+    ~Client()
+    {
+        printf("~Client\n");
+    }
 
 private:
-    Trans *remote_trans_;
     int client_socks_;
 
 public:
@@ -84,7 +90,7 @@ public:
 
         buf[0] = 5;
         buf[1] = 0;
-        n = co_send(client_socks_, this, buf, 2);
+        n = co_send(client_socks_, buf, 2);
         if (n <= 0)
         {
             printf("send error n is %d\n", n);
@@ -135,7 +141,7 @@ public:
 
         printf("port is %u\n", port);
         uint8_t send_buf[] = {0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        co_send(client_socks_, this, send_buf, sizeof(send_buf));
+        co_send(client_socks_, send_buf, sizeof(send_buf));
 
         int remote_sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -146,18 +152,21 @@ public:
 
         setnonblocking(remote_sock);
 
+        std::shared_ptr<Remote> remote_trans = nullptr;
         if (connect(remote_sock, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
         {
             if (errno == EINPROGRESS)
             {
-                remote_trans_ = new Remote(epfd_, remote_sock, client_socks_, this);
+                remote_trans = std::make_shared<Remote>(epfd_, remote_sock, client_socks_);
 
-                modify_mod_add(remote_sock, this, EPOLLOUT);
+                add_trans(epfd_, remote_sock, remote_trans, EPOLLHUP);
+
+                modify_mod_add(remote_sock, EPOLLOUT);
                 co_ptr_->yield(0);
-                modify_mod_del(remote_sock, this, EPOLLOUT);
+                modify_mod_del(remote_sock, EPOLLOUT);
                 //del_trans(epfd_, remote_sock);
 
-                remote_trans_->resume(0);
+                remote_trans->resume(0);
             }
             else
             {
@@ -167,28 +176,18 @@ public:
         }
         else
         {
-            remote_trans_ = new Remote(epfd_, remote_sock, client_socks_, this);
-            remote_trans_->resume(0);
+            remote_trans = std::make_shared<Remote>(epfd_, remote_sock, client_socks_);
+            add_trans(epfd_, remote_sock, remote_trans, EPOLLHUP);
+
+            remote_trans->resume(0);
             printf("connect suc directly\n");
         }
-
-        // if (connect(remote_sock, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
-        // {
-        //     if (errno == EINPROGRESS)
-        //     {
-        //         //add_trans(remote_sock, remote_trans_, EPOLL)
-        //     }
-        //     printf("connect %s:%lu failed\n", tmp_ip, port);
-        //     return;
-        // }
-
-        // setnonblocking(remote_sock);
 
         printf("start read data\n");
         while ((n = co_read(client_socks_, buf, 4096, true)) > 0)
         {
             //printf("client read n is %d\n", n);
-            n = co_send(remote_sock, remote_trans_, buf, n);
+            n = co_send(remote_sock, buf, n);
             if (n <= 0)
             {
                 break;
@@ -199,9 +198,7 @@ public:
         printf("socks %d, n is %d, and error is %d\n", client_socks_, n, errno);
 
         close(client_socks_);
-        close(remote_sock);
         del_trans(epfd_, client_socks_);
-        del_trans(epfd_, remote_sock);
 
         printf("local close socks\n");
     }
